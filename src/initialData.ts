@@ -1,0 +1,51 @@
+import type { AppData } from './types';
+
+export const INITIAL_PRESET_DATA: AppData = {
+  "timetable": {
+    "name": "通常出勤",
+    "periods": [
+      { "num": 1, "start": "09:00", "end": "09:30" },
+      { "num": 2, "start": "09:30", "end": "11:30" },
+      { "num": 3, "start": "11:30", "end": "12:30" },
+      { "num": 4, "start": "12:30", "end": "15:00" },
+      { "num": 5, "start": "15:00", "end": "18:00" }
+    ],
+    "cells": {}
+  },
+  "events": [
+    {
+      "title": "車両ミーティング",
+      "date": "2026-06-26",
+      "startTime": "15:00",
+      "endTime": "16:00",
+      "color": "#ef4444",
+      "desc": "会議室の予約確認\n社内の不燃物ゴミ箱毎日捨てることで満杯にならないようにしてみる\n雇用条件通知書電話掛けスタッフ差し込み印刷にてすすめる\n学販前年９０％ぐらい　PUS前年とかわらず\n東京駅サンプル配れない状態で２５０万ぐらい売れている日もある　市販リニューアルKC→C20　市販品は全部にこどもの顔が入る　輸出想定通り　環境衛生部は砂場強化　砂場清掃は他社との差別化、利益率も高い。\n製薬は１０%程度多く作っている",
+      "id": "ev-1782372866090"
+    },
+    { "title": "通院", "date": "2026-07-17", "startTime": "17:00", "color": "#f59e0b", "id": "ev-1782373254729" },
+    { "title": "車両ミーティング", "date": "2026-07-30", "startTime": "15:00", "color": "#3b82f6", "desc": "23日から移動", "id": "ev-1782454907255" },
+    { "title": "三菱総研", "date": "2026-07-10", "startTime": "14:00", "color": "#8b5cf6", "id": "ev-1782982949683" },
+    { "title": "消防点検", "date": "2026-07-13", "startTime": "09:00", "endTime": "12:00", "color": "#8b5cf6", "id": "ev-1782982967739" },
+    { "title": "本伝", "date": "2026-07-02", "color": "#3b82f6", "id": "ev-1782982976658" },
+    { "title": "仮伝", "date": "2026-07-01", "color": "#3b82f6", "id": "ev-1782982981425" },
+    { "title": "仮伝", "date": "2026-07-14", "color": "#3b82f6", "id": "ev-1782982999285" },
+    { "title": "本伝", "date": "2026-07-15", "color": "#3b82f6", "id": "ev-1782983003170" },
+    { "title": "藤井副社長資料締め切り", "date": "2026-07-08", "color": "#3b82f6", "id": "ev-1782983047528" },
+    { "title": "週報", "date": "2026-07-03", "startTime": "17:00", "endTime": "18:00", "color": "#3b82f6", "id": "ev-1783061138858" },
+    { "title": "封筒づくり", "date": "2026-07-07", "color": "#3b82f6", "id": "ev-1783319629535" },
+    { "title": "三菱総研", "date": "2026-07-22", "startTime": "14:30", "endTime": "17:00", "color": "#8b5cf6", "desc": "TEAMSにて{WEBにて打合", "id": "ev-1783666997546" },
+    { "title": "三菱総研資料作成締め切り", "date": "2026-07-16", "color": "#ef4444", "id": "ev-1783667020984" },
+    { "title": "三菱にむけての会議", "date": "2026-07-15", "startTime": "14:30", "color": "#3b82f6", "id": "ev-1783670058048" }
+  ],
+  "memos": [
+    { "title": "yty", "content": "yty", "tags": ["クイック"], "linkId": "", "id": "memo-1783492082075", "updatedAt": "2026-07-08T06:28:02.075Z" }
+  ],
+  "stickies": [
+    { "id": "sticky-1783928575046", "content": "隣デスク片づけ", "color": "#fde68a", "createdAt": "2026-07-13T07:42:55.046Z", "pinned": false, "archived": true, "attachedDate": "2026-07-18", "folderId": "folder-1784271876897" },
+    { "id": "sticky-1784284218740", "content": "osouji", "color": "#fde68a", "createdAt": "2026-07-17T10:30:18.740Z", "pinned": false, "archived": true },
+    { "id": "sticky-1784679093338", "content": "テスト", "color": "#fde68a", "createdAt": "2026-07-22T00:11:33.338Z", "pinned": false, "archived": true, "folderId": "folder-1784271876897" }
+  ],
+  "stickyFolders": [
+    { "id": "folder-1784271876897", "name": "カレンダーに貼り付け分", "color": "#ef4444", "createdAt": "2026-07-17T07:04:36.897Z" }
+  ]
+};
