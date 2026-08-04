@@ -394,13 +394,24 @@ export const Calendar: React.FC<CalendarProps> = ({ onDateClick, onEventClick, o
                                     {/* タグカラー選択 */}
                                     <div className="form-group">
                                         <label className="form-label">タグカラー</label>
-                                        <div className="color-selector">
+                                        <div className="color-selector" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', marginTop: '4px' }}>
                                             {['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1'].map(c => (
                                                 <button
                                                     key={c}
                                                     type="button"
                                                     className={`color-chip ${newColor === c ? 'selected' : ''}`}
-                                                    style={{ background: c }}
+                                                    style={{
+                                                        backgroundColor: c,
+                                                        width: '28px',
+                                                        height: '28px',
+                                                        borderRadius: '50%',
+                                                        border: newColor === c ? '3px solid #ffffff' : '2px solid transparent',
+                                                        boxShadow: newColor === c ? '0 0 0 2px rgba(59, 130, 246, 0.6), 0 2px 6px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.2)',
+                                                        transform: newColor === c ? 'scale(1.15)' : 'scale(1)',
+                                                        cursor: 'pointer',
+                                                        transition: 'all 0.15s ease',
+                                                        padding: 0
+                                                    }}
                                                     onClick={() => setNewColor(c)}
                                                 />
                                             ))}
@@ -441,13 +452,24 @@ export const Calendar: React.FC<CalendarProps> = ({ onDateClick, onEventClick, o
                                         onChange={e => setNewStickyText(e.target.value)}
                                         rows={2}
                                     />
-                                    <div className="color-selector" style={{ marginTop: '8px' }}>
+                                    <div className="color-selector" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', marginTop: '8px' }}>
                                         {['#fde68a', '#bbf7d0', '#bfdbfe', '#fecaca', '#e9d5ff', '#fed7aa'].map(c => (
                                             <button
                                                 key={c}
                                                 type="button"
                                                 className={`color-chip ${newStickyColor === c ? 'selected' : ''}`}
-                                                style={{ background: c }}
+                                                style={{
+                                                    backgroundColor: c,
+                                                    width: '28px',
+                                                    height: '28px',
+                                                    borderRadius: '50%',
+                                                    border: newStickyColor === c ? '3px solid #ffffff' : '2px solid transparent',
+                                                    boxShadow: newStickyColor === c ? '0 0 0 2px rgba(245, 158, 11, 0.6), 0 2px 6px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.2)',
+                                                    transform: newStickyColor === c ? 'scale(1.15)' : 'scale(1)',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.15s ease',
+                                                    padding: 0
+                                                }}
                                                 onClick={() => setNewStickyColor(c)}
                                             />
                                         ))}
