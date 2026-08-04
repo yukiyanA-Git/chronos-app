@@ -107,15 +107,7 @@ function App() {
         setIsEventModalOpen(true);
     };
 
-    // カレンダーの日付クリック（新規）
-    const handleCalendarDateClick = (dateStr: string) => {
-        setModalMode('calendar');
-        setSelectedDayIdx(null);
-        setSelectedPeriodIdx(null);
-        setSelectedEventId(null);
-        setSelectedDateStr(dateStr);
-        setIsEventModalOpen(true);
-    };
+
 
     // カレンダーのイベントクリック（編集）
     const handleCalendarEventClick = (eventId: string) => {
@@ -348,7 +340,6 @@ function App() {
                 )}
                 {currentView === 'calendar' && (
                     <Calendar
-                        onDateClick={handleCalendarDateClick}
                         onEventClick={handleCalendarEventClick}
                         onExportClick={() => setIsExportModalOpen(true)}
                     />
