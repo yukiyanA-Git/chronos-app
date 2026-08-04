@@ -33,6 +33,7 @@ export const EventModal: React.FC<EventModalProps> = ({
     // カレンダー用
     const todayDateStr = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
     const [date, setDate] = useState(todayDateStr);
+    const [endDate, setEndDate] = useState('');
     const [startTime, setStartTime] = useState('');
     const [endTime, setEndTime] = useState('');
 
@@ -66,6 +67,7 @@ export const EventModal: React.FC<EventModalProps> = ({
                 if (ev) {
                     setTitle(ev.title || '');
                     setDate(ev.date || '');
+                    setEndDate(ev.endDate || '');
                     setStartTime(ev.startTime || '');
                     setEndTime(ev.endTime || '');
                     setColor(ev.color || '#3b82f6');
@@ -75,6 +77,7 @@ export const EventModal: React.FC<EventModalProps> = ({
                 setTitle('');
                 const fallbackDate = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
                 setDate(initialDateStr || fallbackDate);
+                setEndDate('');
                 setStartTime('');
                 setEndTime('');
                 setColor('#3b82f6');
@@ -103,6 +106,7 @@ export const EventModal: React.FC<EventModalProps> = ({
             const eventData = {
                 title: eventTitle,
                 date,
+                endDate: endDate ? (endDate >= date ? endDate : date) : undefined,
                 startTime: startTime || undefined,
                 endTime: endTime || undefined,
                 color,
@@ -170,15 +174,28 @@ export const EventModal: React.FC<EventModalProps> = ({
 
                     {mode === 'calendar' && (
                         <>
-                            <div className="form-group">
-                                <label className="form-label">日付 *</label>
-                                <input
-                                    type="date"
-                                    className="form-input"
-                                    value={date}
-                                    onChange={(e) => setDate(e.target.value)}
-                                    required
-                                />
+                            <div className="form-row" style={{ display: 'flex', gap: '12px' }}>
+                                <div className="form-group" style={{ flex: 1 }}>
+                                    <label className="form-label">開始日 *</label>
+                                    <input
+                                        type="date"
+                                        className="form-input"
+                                        value={date}
+                                        onChange={(e) => setDate(e.target.value)}
+                                        required
+                                    />
+                                </div>
+                                <div className="form-group" style={{ flex: 1 }}>
+                                    <label className="form-label">終了日 (期間予定の場合)</label>
+                                    <input
+                                        type="date"
+                                        className="form-input"
+                                        value={endDate}
+                                        min={date}
+                                        onChange={(e) => setEndDate(e.target.value)}
+                                        placeholder="同日のみの場合は空欄"
+                                    />
+                                </div>
                             </div>
 
                             <div className="form-row" style={{ display: 'flex', gap: '12px' }}>

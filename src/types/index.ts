@@ -22,6 +22,7 @@ export interface CalendarEvent {
     id: string;
     title: string;
     date: string;
+    endDate?: string;  // 終了日 (YYYY-MM-DD)
     startTime?: string;
     endTime?: string;
     color?: string;

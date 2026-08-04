@@ -636,6 +636,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                                         id: { stringValue: ev.id },
                                         title: { stringValue: ev.title },
                                         date: { stringValue: ev.date },
+                                        endDate: { stringValue: ev.endDate || '' },
                                         startTime: { stringValue: ev.startTime || '' },
                                         endTime: { stringValue: ev.endTime || '' },
                                         color: { stringValue: ev.color || '' },
