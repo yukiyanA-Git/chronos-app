@@ -391,9 +391,9 @@ export const Calendar: React.FC<CalendarProps> = ({ onDateClick, onEventClick, o
                                         </div>
                                     </div>
 
-                                    {/* ラベルカラー選択 */}
+                                    {/* タグカラー選択 */}
                                     <div className="form-group">
-                                        <label className="form-label">ラベル色</label>
+                                        <label className="form-label">タグカラー</label>
                                         <div className="color-selector">
                                             {['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1'].map(c => (
                                                 <button
