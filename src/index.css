@@ -3351,7 +3351,19 @@ body {
 
 .calendar-layout-wrapper .calendar-container {
     flex: 1;
+    width: 100%;
     min-width: 0;
+}
+
+.calendar-container {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.calendar-grid-header,
+.calendar-grid-days {
+    width: 100%;
+    box-sizing: border-box;
 }
 
 /* 選択された日付マスの強調ハイライト */
@@ -3545,11 +3557,21 @@ body {
 @media (max-width: 900px) {
     .calendar-layout-wrapper {
         flex-direction: column;
+        width: 100%;
+    }
+    .calendar-layout-wrapper .calendar-container {
+        width: 100%;
+        box-sizing: border-box;
+    }
+    .calendar-container {
+        padding: 12px 8px;
+        width: 100%;
     }
     .calendar-side-panel {
         width: 100%;
         position: static;
         max-height: none;
+        box-sizing: border-box;
     }
 }
 
