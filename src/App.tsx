@@ -11,6 +11,7 @@ import { ShareImportModal } from './components/ShareImportModal';
 import { ExportModal } from './components/ExportModal';
 import { GuideModal } from './components/GuideModal';
 import { ChronosWidgetPanel } from './components/ChronosWidgetPanel';
+import { AcrylicAdBanner } from './components/AcrylicAdBanner';
 import { LayoutDashboard, Grid, Calendar as CalendarIcon, StickyNote, Settings as SettingsIcon, Circle, Clock, AlertCircle, HelpCircle, LogIn, LogOut } from 'lucide-react';
 
 function App() {
@@ -305,18 +306,23 @@ function App() {
             {/* メインコンテンツ */}
             <main className="main-content">
                 {/* クラウド同期案内ステータスバー */}
-                <div className="global-sync-bar">
-                    {currentUser ? (
-                        <div className="sync-bar-item synced">
-                            <span className="sync-dot green">●</span>
-                            <span>クラウド同期中 ({currentUser.email || currentUser.displayName || 'ログイン済み'})</span>
-                        </div>
-                    ) : (
-                        <div className="sync-bar-item offline" onClick={loginWithGoogle} title="クリックしてログイン">
-                            <span className="sync-dot orange">●</span>
-                            <span>未ログイン (スマホ・PC連携オフ) ➔ <strong style={{ textDecoration: 'underline' }}>タップしてGoogleログインで同期</strong></span>
-                        </div>
-                    )}
+                <div className="global-sync-bar-row">
+                    <div className="global-sync-bar">
+                        {currentUser ? (
+                            <div className="sync-bar-item synced">
+                                <span className="sync-dot green">●</span>
+                                <span>クラウド同期中 ({currentUser.email || currentUser.displayName || 'ログイン済み'})</span>
+                            </div>
+                        ) : (
+                            <div className="sync-bar-item offline" onClick={loginWithGoogle} title="クリックしてログイン">
+                                <span className="sync-dot orange">●</span>
+                                <span>未ログイン (スマホ・PC連携オフ) ➔ <strong style={{ textDecoration: 'underline' }}>タップしてGoogleログインで同期</strong></span>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* 上部: アクリル額縁高級広告枠 (同期バー右横) */}
+                    <AcrylicAdBanner position="top" />
                 </div>
 
                 {currentView === 'dashboard' && (
@@ -346,6 +352,9 @@ function App() {
                 )}
                 {currentView === 'memos' && <Memos onExportClick={() => setIsExportModalOpen(true)} />}
                 {currentView === 'settings' && <Settings onExportClick={() => setIsExportModalOpen(true)} />}
+
+                {/* 最下部: アクリル額縁高級広告枠 (別枠/ページ最下部) */}
+                <AcrylicAdBanner position="bottom" />
             </main>
 
             {/* 予定/業務編集モーダル */}
