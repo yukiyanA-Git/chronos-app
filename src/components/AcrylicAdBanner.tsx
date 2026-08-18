@@ -31,18 +31,20 @@ export const AcrylicAdBanner: React.FC<AcrylicAdBannerProps> = ({ position = 'to
                         className="adsbygoogle"
                         style={{ display: 'block', width: '100%', height: '100%' }}
                         data-ad-client="ca-pub-5012440476019514"
-                        data-ad-format="auto"
-                        data-full-width-responsive="true"
+                        data-ad-format="horizontal"
+                        data-full-width-responsive="false"
                     ></ins>
                     <div className="ad-placeholder-text" style={{ pointerEvents: 'none' }}>
-                        <Sparkles size={14} className="ad-sparkle-icon" />
-                        <span>PREMIUM PARTNER / 広告掲載スペース</span>
+                        <Sparkles size={13} className="ad-sparkle-icon" />
+                        <span style={{ fontSize: position === 'top' ? '0.75rem' : '0.8rem' }}>
+                            {position === 'top' ? 'PREMIUM SPONSOR' : 'PREMIUM PARTNER / 広告掲載スペース'}
+                        </span>
                     </div>
                 </div>
 
                 {/* スポンサーラベル */}
                 <div className="acrylic-ad-footer">
-                    <span className="sponsored-label">S P O N S O R E D</span>
+                    <span className="sponsored-label">{position === 'top' ? 'AD' : 'S P O N S O R E D'}</span>
                 </div>
             </div>
         </div>

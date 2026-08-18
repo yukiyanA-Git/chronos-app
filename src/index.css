@@ -3612,15 +3612,42 @@ body {
 
 .acrylic-ad-frame.top-ad {
     flex: 1;
-    max-width: 480px;
-    max-height: 90px;
-    height: 90px;
+    max-width: 460px;
+    height: 48px !important;
+    max-height: 48px !important;
+    min-height: 48px !important;
+    box-sizing: border-box;
+}
+
+.acrylic-ad-frame.top-ad .acrylic-ad-inner {
+    padding: 4px 12px;
+    height: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.acrylic-ad-frame.top-ad .acrylic-ad-content {
+    min-height: auto;
+    height: 36px !important;
+    max-height: 36px !important;
+    overflow: hidden;
+    flex: 1;
+}
+
+.acrylic-ad-frame.top-ad .acrylic-ad-footer {
+    border-top: none;
+    margin-top: 0;
+    padding-top: 0;
+    margin-left: 8px;
 }
 
 .acrylic-ad-frame.bottom-ad {
     width: 100%;
-    max-height: 130px;
-    margin-top: 24px;
+    max-height: 110px;
+    margin-top: 28px;
     margin-bottom: 20px;
 }
 
