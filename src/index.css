@@ -3613,10 +3613,13 @@ body {
 .acrylic-ad-frame.top-ad {
     flex: 1;
     max-width: 480px;
+    max-height: 90px;
+    height: 90px;
 }
 
 .acrylic-ad-frame.bottom-ad {
     width: 100%;
+    max-height: 130px;
     margin-top: 24px;
     margin-bottom: 20px;
 }
