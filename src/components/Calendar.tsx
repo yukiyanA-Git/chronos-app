@@ -33,7 +33,7 @@ const isEventOnDate = (ev: CalendarEvent, targetDateStr: string): boolean => {
 };
 
 export const Calendar: React.FC<CalendarProps> = ({ onDateClick, onEventClick, onExportClick }) => {
-    const { data, addSticky, attachStickyToDate, deleteCalendarEvent, addCalendarEvent } = useApp();
+    const { data, addStickyToDate, attachStickyToDate, deleteCalendarEvent, addCalendarEvent } = useApp();
     const [currentDate, setCurrentDate] = useState(() => new Date());
 
     // 初期状態で今日を選択
@@ -150,13 +150,7 @@ export const Calendar: React.FC<CalendarProps> = ({ onDateClick, onEventClick, o
     // 新規付箋作成・貼り付け実行
     const handleCreateAndAttachSticky = () => {
         if (!newStickyText.trim() || !selectedDate) return;
-        addSticky(newStickyText.trim(), newStickyColor);
-        setTimeout(() => {
-            const latest = (data.stickies || []).slice().sort((a, b) =>
-                b.createdAt.localeCompare(a.createdAt)
-            )[0];
-            if (latest) attachStickyToDate(latest.id, selectedDate);
-        }, 100);
+        addStickyToDate(newStickyText.trim(), newStickyColor, selectedDate);
         setNewStickyText('');
         setShowAddSticky(false);
     };
