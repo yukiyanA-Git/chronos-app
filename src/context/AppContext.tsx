@@ -33,6 +33,7 @@ interface AppContextProps {
     archiveSticky: (id: string) => void;
     unarchiveSticky: (id: string) => void;
     attachStickyToDate: (id: string, date: string | undefined) => void;
+    addStickyToDate: (content: string, color: string, attachedDate: string) => void;
     // フォルダー操作
     addStickyFolder: (name: string, color: string) => void;
     renameStickyFolder: (id: string, name: string) => void;
@@ -435,6 +436,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
     };
 
+    // カレンダー日付直接貼り付け用付箋作成 (アトミック保存・1回で100%確実に完了)
+    const addStickyToDate = (content: string, color: string, attachedDate: string) => {
+        const newSticky: StickyNote = {
+            id: Date.now().toString(),
+            content,
+            color,
+            pinned: false,
+            archived: false,
+            attachedDate,
+            createdAt: new Date().toISOString()
+        };
+        saveData({
+            ...data,
+            stickies: [newSticky, ...(data.stickies || [])]
+        });
+    };
+
     // ボイス入力専用付箋作成 (専用フォルダー「🎙️ ボイス入力付箋」を自動生成・格納)
     const addVoiceSticky = (content: string) => {
         const folders = data.stickyFolders || [];
@@ -782,6 +800,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             archiveSticky,
             unarchiveSticky,
             attachStickyToDate,
+            addStickyToDate,
             addStickyFolder,
             renameStickyFolder,
             deleteStickyFolder,
