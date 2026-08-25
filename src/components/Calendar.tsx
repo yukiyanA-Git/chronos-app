@@ -33,7 +33,10 @@ const isEventOnDate = (ev: CalendarEvent, targetDateStr: string): boolean => {
 };
 
 export const Calendar: React.FC<CalendarProps> = ({ onDateClick, onEventClick, onExportClick }) => {
-    const { data, addStickyToDate, attachStickyToDate, deleteCalendarEvent, addCalendarEvent } = useApp();
+    const {
+        data, addStickyToDate, attachStickyToDate, deleteCalendarEvent, addCalendarEvent,
+        draftStickyText, draftStickyColor, setDraftStickyText, setDraftStickyColor, clearDraftSticky
+    } = useApp();
     const [currentDate, setCurrentDate] = useState(() => new Date());
 
     // 初期状態で今日を選択
@@ -53,10 +56,8 @@ export const Calendar: React.FC<CalendarProps> = ({ onDateClick, onEventClick, o
     const [newColor, setNewColor] = useState('#3b82f6');
     const [newDesc, setNewDesc] = useState('');
 
-    // 右側パネル内での「新規付箋作成」展開状態
-    const [showAddSticky, setShowAddSticky] = useState(false);
-    const [newStickyText, setNewStickyText] = useState('');
-    const [newStickyColor, setNewStickyColor] = useState('#fde68a');
+    // 右側パネル内での「新規付箋作成」展開状態（下書きがあれば自動で表示）
+    const [showAddSticky, setShowAddSticky] = useState(() => !!draftStickyText.trim());
 
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -149,9 +150,9 @@ export const Calendar: React.FC<CalendarProps> = ({ onDateClick, onEventClick, o
 
     // 新規付箋作成・貼り付け実行
     const handleCreateAndAttachSticky = () => {
-        if (!newStickyText.trim() || !selectedDate) return;
-        addStickyToDate(newStickyText.trim(), newStickyColor, selectedDate);
-        setNewStickyText('');
+        if (!draftStickyText.trim() || !selectedDate) return;
+        addStickyToDate(draftStickyText.trim(), draftStickyColor, selectedDate);
+        clearDraftSticky();
         setShowAddSticky(false);
     };
 
@@ -442,8 +443,8 @@ export const Calendar: React.FC<CalendarProps> = ({ onDateClick, onEventClick, o
                                     <textarea
                                         className="form-input"
                                         placeholder="付箋のメモ内容を入力..."
-                                        value={newStickyText}
-                                        onChange={e => setNewStickyText(e.target.value)}
+                                        value={draftStickyText}
+                                        onChange={e => setDraftStickyText(e.target.value)}
                                         rows={2}
                                     />
                                     <div className="color-selector" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', marginTop: '8px' }}>
@@ -451,28 +452,28 @@ export const Calendar: React.FC<CalendarProps> = ({ onDateClick, onEventClick, o
                                             <button
                                                 key={c}
                                                 type="button"
-                                                className={`color-chip ${newStickyColor === c ? 'selected' : ''}`}
+                                                className={`color-chip ${draftStickyColor === c ? 'selected' : ''}`}
                                                 style={{
                                                     backgroundColor: c,
                                                     width: '28px',
                                                     height: '28px',
                                                     borderRadius: '50%',
-                                                    border: newStickyColor === c ? '3px solid #ffffff' : '2px solid transparent',
-                                                    boxShadow: newStickyColor === c ? '0 0 0 2px rgba(245, 158, 11, 0.6), 0 2px 6px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.2)',
-                                                    transform: newStickyColor === c ? 'scale(1.15)' : 'scale(1)',
+                                                    border: draftStickyColor === c ? '3px solid #ffffff' : '2px solid transparent',
+                                                    boxShadow: draftStickyColor === c ? '0 0 0 2px rgba(245, 158, 11, 0.6), 0 2px 6px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.2)',
+                                                    transform: draftStickyColor === c ? 'scale(1.15)' : 'scale(1)',
                                                     cursor: 'pointer',
                                                     transition: 'all 0.15s ease',
                                                     padding: 0
                                                 }}
-                                                onClick={() => setNewStickyColor(c)}
+                                                onClick={() => setDraftStickyColor(c)}
                                             />
                                         ))}
                                     </div>
                                     <div className="form-actions-row" style={{ marginTop: '8px' }}>
                                         <button type="button" className="btn btn-sm btn-secondary" onClick={() => setShowAddSticky(false)}>
-                                            キャンセル
+                                            閉じる
                                         </button>
-                                        <button type="button" className="btn btn-sm btn-primary" onClick={handleCreateAndAttachSticky} disabled={!newStickyText.trim()}>
+                                        <button type="button" className="btn btn-sm btn-primary" onClick={handleCreateAndAttachSticky} disabled={!draftStickyText.trim()}>
                                             貼り付ける
                                         </button>
                                     </div>
