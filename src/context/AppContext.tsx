@@ -560,7 +560,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
     };
 
-    // フォルダー操作
+    // フォルダー操作 (必ず saveData でローカルストレージ＆クラウドへ即時永続保存)
     const addStickyFolder = (name: string, color: string) => {
         const newFolder = {
             id: Date.now().toString(),
@@ -568,36 +568,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             color,
             createdAt: new Date().toISOString()
         };
-        setData(prev => ({
-            ...prev,
-            stickyFolders: [...(prev.stickyFolders || []), newFolder]
-        }));
+        saveData({
+            ...data,
+            stickyFolders: [...(data.stickyFolders || []), newFolder]
+        });
     };
 
     const renameStickyFolder = (id: string, name: string) => {
-        setData(prev => ({
-            ...prev,
-            stickyFolders: (prev.stickyFolders || []).map(f => f.id === id ? { ...f, name } : f)
-        }));
+        saveData({
+            ...data,
+            stickyFolders: (data.stickyFolders || []).map(f => f.id === id ? { ...f, name } : f)
+        });
     };
 
     const deleteStickyFolder = (id: string) => {
-        setData(prev => ({
-            ...prev,
-            stickyFolders: (prev.stickyFolders || []).filter(f => f.id !== id),
-            stickies: (prev.stickies || []).map(s => s.folderId === id ? { ...s, folderId: undefined } : s)
-        }));
+        saveData({
+            ...data,
+            stickyFolders: (data.stickyFolders || []).filter(f => f.id !== id),
+            stickies: (data.stickies || []).map(s => s.folderId === id ? { ...s, folderId: undefined } : s)
+        });
     };
 
     const moveStickyToFolder = (stickyId: string, folderId: string | null) => {
-        setData(prev => ({
-            ...prev,
-            stickies: (prev.stickies || []).map(s => s.id === stickyId ? {
+        saveData({
+            ...data,
+            stickies: (data.stickies || []).map(s => s.id === stickyId ? {
                 ...s,
                 folderId: folderId || undefined,
-                archived: true // 付箋ボードで移動操作された付箋は確実に保持
+                archived: true
             } : s)
-        }));
+        });
     };
 
     // 共有URL生成 (互換性保持)
