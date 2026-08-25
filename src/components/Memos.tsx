@@ -22,7 +22,8 @@ interface MemosProps {
 export const Memos: React.FC<MemosProps> = ({ onExportClick }) => {
     const {
         data, addSticky, deleteSticky, unarchiveSticky, attachStickyToDate, updateSticky,
-        addStickyFolder, renameStickyFolder, deleteStickyFolder, moveStickyToFolder
+        addStickyFolder, renameStickyFolder, deleteStickyFolder, moveStickyToFolder,
+        draftStickyText, draftStickyColor, setDraftStickyText, setDraftStickyColor, clearDraftSticky
     } = useApp();
 
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -30,10 +31,8 @@ export const Memos: React.FC<MemosProps> = ({ onExportClick }) => {
     const [attachTarget, setAttachTarget] = useState<string | null>(null);
     const [attachDate, setAttachDate] = useState('');
 
-    // 新規付箋作成
-    const [showCreateSticky, setShowCreateSticky] = useState(false);
-    const [newStickyText, setNewStickyText] = useState('');
-    const [newStickyColor, setNewStickyColor] = useState(STICKY_COLORS[0]);
+    // 新規付箋作成（下書きがある場合は自動的にフォームを開いた状態にする）
+    const [showCreateSticky, setShowCreateSticky] = useState(() => !!draftStickyText.trim());
 
     // フォルダー作成
     const [showCreateFolder, setShowCreateFolder] = useState(false);
@@ -55,10 +54,9 @@ export const Memos: React.FC<MemosProps> = ({ onExportClick }) => {
     const folders = data.stickyFolders || [];
 
     const handleCreateSticky = () => {
-        if (!newStickyText.trim()) return;
-        addSticky(newStickyText.trim(), newStickyColor, true);
-        setNewStickyText('');
-        setNewStickyColor(STICKY_COLORS[0]);
+        if (!draftStickyText.trim()) return;
+        addSticky(draftStickyText.trim(), draftStickyColor, true);
+        clearDraftSticky();
         setShowCreateSticky(false);
     };
 
@@ -252,8 +250,8 @@ export const Memos: React.FC<MemosProps> = ({ onExportClick }) => {
                     <textarea
                         className="folder-name-input"
                         placeholder="付箋のメッセージ内容..."
-                        value={newStickyText}
-                        onChange={e => setNewStickyText(e.target.value)}
+                        value={draftStickyText}
+                        onChange={e => setDraftStickyText(e.target.value)}
                         rows={2}
                         style={{ width: '100%', borderRadius: '8px', padding: '8px', marginBottom: '8px' }}
                         autoFocus
@@ -262,15 +260,15 @@ export const Memos: React.FC<MemosProps> = ({ onExportClick }) => {
                         {STICKY_COLORS.map(c => (
                             <button
                                 key={c}
-                                className={`folder-color-chip ${newStickyColor === c ? 'selected' : ''}`}
+                                className={`folder-color-chip ${draftStickyColor === c ? 'selected' : ''}`}
                                 style={{ background: c }}
-                                onClick={() => setNewStickyColor(c)}
+                                onClick={() => setDraftStickyColor(c)}
                             />
                         ))}
                     </div>
                     <div className="folder-create-actions">
-                        <button className="btn btn-primary btn-sm" onClick={handleCreateSticky} disabled={!newStickyText.trim()}>作成する</button>
-                        <button className="btn btn-secondary btn-sm" onClick={() => setShowCreateSticky(false)}>キャンセル</button>
+                        <button className="btn btn-primary btn-sm" onClick={handleCreateSticky} disabled={!draftStickyText.trim()}>作成する</button>
+                        <button className="btn btn-secondary btn-sm" onClick={() => setShowCreateSticky(false)}>閉じる</button>
                     </div>
                 </div>
             )}

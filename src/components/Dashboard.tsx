@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { Calendar, BookOpen, Plus, Smile, StickyNote, X, Pin, Archive } from 'lucide-react';
 import { ChronosWidgetPanel } from './ChronosWidgetPanel';
@@ -20,9 +20,10 @@ const STICKY_COLORS = [
 ];
 
 export const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onAddEventClick }) => {
-    const { data, addSticky, updateSticky, deleteSticky, pinSticky, archiveSticky } = useApp();
-    const [selectedColor, setSelectedColor] = useState(STICKY_COLORS[0]);
-    const [newStickyText, setNewStickyText] = useState('');
+    const {
+        data, addSticky, updateSticky, deleteSticky, pinSticky, archiveSticky,
+        draftStickyText, draftStickyColor, setDraftStickyText, setDraftStickyColor, clearDraftSticky
+    } = useApp();
     const debounceTimers = useRef<{ [id: string]: ReturnType<typeof setTimeout> }>({});
 
     const today = new Date();
@@ -52,10 +53,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onAddEventCl
         .slice(0, 5);
 
     const handleAddSticky = () => {
-        const text = newStickyText.trim();
+        const text = draftStickyText.trim();
         if (!text) return;
-        addSticky(text, selectedColor);
-        setNewStickyText('');
+        addSticky(text, draftStickyColor);
+        clearDraftSticky();
     };
 
     const handleStickyChange = (id: string, value: string) => {
@@ -173,15 +174,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onAddEventCl
                         </div>
                     </div>
                     <div className="card-content sticky-board-content">
-                        {/* 新規入力エリア */}
+                        {/* 新規入力エリア (下書き連携・ページ切替でも保持) */}
                         <div className="sticky-input-area">
                             <div className="sticky-color-picker">
                                 {STICKY_COLORS.map(c => (
                                     <button
                                         key={c}
-                                        className={`sticky-color-btn ${selectedColor === c ? 'active' : ''}`}
+                                        className={`sticky-color-btn ${draftStickyColor === c ? 'active' : ''}`}
                                         style={{ backgroundColor: c }}
-                                        onClick={() => setSelectedColor(c)}
+                                        onClick={() => setDraftStickyColor(c)}
                                         title={c}
                                     />
                                 ))}
@@ -191,10 +192,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onAddEventCl
                                     type="text"
                                     className="sticky-new-input"
                                     placeholder="付箋に書く内容... (Enterで追加)"
-                                    value={newStickyText}
-                                    onChange={(e) => setNewStickyText(e.target.value)}
+                                    value={draftStickyText}
+                                    onChange={(e) => setDraftStickyText(e.target.value)}
                                     onKeyDown={(e) => { if (e.key === 'Enter') handleAddSticky(); }}
-                                    style={{ borderColor: selectedColor }}
+                                    style={{ borderColor: draftStickyColor }}
                                 />
                                 <button className="btn btn-sm btn-primary" onClick={handleAddSticky}>
                                     <Plus size={14} /> 追加

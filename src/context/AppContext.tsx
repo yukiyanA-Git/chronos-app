@@ -34,6 +34,12 @@ interface AppContextProps {
     unarchiveSticky: (id: string) => void;
     attachStickyToDate: (id: string, date: string | undefined) => void;
     addStickyToDate: (content: string, color: string, attachedDate: string) => void;
+    // 下書き (Draft) 操作
+    draftStickyText: string;
+    draftStickyColor: string;
+    setDraftStickyText: (text: string) => void;
+    setDraftStickyColor: (color: string) => void;
+    clearDraftSticky: () => void;
     // フォルダー操作
     addStickyFolder: (name: string, color: string) => void;
     renameStickyFolder: (id: string, name: string) => void;
@@ -256,6 +262,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             if (unsubscribeFirestore) unsubscribeFirestore();
         };
     }, []);
+
+    // 2.5. 下書き付箋の自動保存・復元ロジック (ページ切替・ブラウザ閉じる等でも消えない)
+    const [draftStickyTextState, setDraftStickyTextState] = useState(() => localStorage.getItem('chronos_draft_sticky_text') || '');
+    const [draftStickyColorState, setDraftStickyColorState] = useState(() => localStorage.getItem('chronos_draft_sticky_color') || '#fde68a');
+
+    const setDraftStickyText = (text: string) => {
+        setDraftStickyTextState(text);
+        if (text) {
+            localStorage.setItem('chronos_draft_sticky_text', text);
+        } else {
+            localStorage.removeItem('chronos_draft_sticky_text');
+        }
+    };
+
+    const setDraftStickyColor = (color: string) => {
+        setDraftStickyColorState(color);
+        localStorage.setItem('chronos_draft_sticky_color', color);
+    };
+
+    const clearDraftSticky = () => {
+        setDraftStickyTextState('');
+        localStorage.removeItem('chronos_draft_sticky_text');
+    };
 
     // 3. 安全なデータ保存ヘルパー (ローカル ＋ クラウドへの明確な保存送信)
     const saveData = (newData: AppData) => {
@@ -801,6 +830,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             unarchiveSticky,
             attachStickyToDate,
             addStickyToDate,
+            draftStickyText: draftStickyTextState,
+            draftStickyColor: draftStickyColorState,
+            setDraftStickyText,
+            setDraftStickyColor,
+            clearDraftSticky,
             addStickyFolder,
             renameStickyFolder,
             deleteStickyFolder,
