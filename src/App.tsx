@@ -12,6 +12,7 @@ import { ExportModal } from './components/ExportModal';
 import { GuideModal } from './components/GuideModal';
 import { ChronosWidgetPanel } from './components/ChronosWidgetPanel';
 import { AcrylicAdBanner } from './components/AcrylicAdBanner';
+import { ChronosKnowledgeFooter } from './components/ChronosKnowledgeFooter';
 import { LayoutDashboard, Grid, Calendar as CalendarIcon, StickyNote, Settings as SettingsIcon, Circle, Clock, AlertCircle, HelpCircle, LogIn, LogOut } from 'lucide-react';
 
 function App() {
@@ -308,7 +309,12 @@ function App() {
                 {/* クラウド同期案内ステータスバー */}
                 <div className="global-sync-bar-row">
                     <div className="global-sync-bar">
-                        {currentUser ? (
+                        {loading ? (
+                            <div className="sync-bar-item syncing" style={{ opacity: 0.8 }}>
+                                <span className="sync-dot blue">●</span>
+                                <span>クラウド接続確認中...</span>
+                            </div>
+                        ) : currentUser ? (
                             <div className="sync-bar-item synced">
                                 <span className="sync-dot green">●</span>
                                 <span>クラウド同期中 ({currentUser.email || currentUser.displayName || 'ログイン済み'})</span>
@@ -353,8 +359,11 @@ function App() {
                 {currentView === 'memos' && <Memos onExportClick={() => setIsExportModalOpen(true)} />}
                 {currentView === 'settings' && <Settings onExportClick={() => setIsExportModalOpen(true)} />}
 
-                {/* 最下部: アクリル額縁高級広告枠 (別枠/ページ最下部) */}
-                <AcrylicAdBanner position="bottom" />
+                {/* 生産性向上ナレッジ ＆ Chronos 活用解説ベース (AdSense 高有用性コンテンツ) */}
+                <ChronosKnowledgeFooter />
+
+                {/* 最下部: アクリル額縁高級広告枠 (設定画面・非コンテンツ画面ではポリシー準拠により非表示) */}
+                {currentView !== 'settings' && <AcrylicAdBanner position="bottom" />}
             </main>
 
             {/* 予定/業務編集モーダル */}

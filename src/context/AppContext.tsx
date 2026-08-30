@@ -172,7 +172,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const [theme, setTheme] = useState<string>('dark');
     const [bgColor, setBgColorState] = useState<string>('');
-    const loading = false;
+    const [authInitializing, setAuthInitializing] = useState<boolean>(true);
     const [currentUser, setCurrentUser] = useState<User | null>(null);
 
     const [cloudSyncInfo, setCloudSyncInfo] = useState<{
@@ -210,6 +210,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
             setCurrentUser(user);
+            setAuthInitializing(false);
 
             if (user) {
                 const userDocRef = doc(db, 'users', user.uid, 'appData', 'chronosData');
@@ -807,7 +808,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             data,
             theme,
             bgColor,
-            loading,
+            loading: authInitializing,
             currentUser,
             loginWithGoogle,
             logout,
