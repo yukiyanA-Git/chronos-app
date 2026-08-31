@@ -12,15 +12,11 @@
     <!-- Google AdSense -->
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5012440476019514" crossorigin="anonymous"></script>
   </head>
-  <body style="background-color: #0f172a; color: #f8fafc; margin: 0; padding: 0;">
+  <body style="background-color: #0f172a; color: #f8fafc; margin: 0; padding: 0; overflow: hidden;">
     <div id="root">
-      <!-- 起動時の yukiyanArt 公式ロゴ スプラッシュアニメーション -->
-      <div style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #0f172a; color: #94a3b8; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-        <div style="position: relative; margin-bottom: 16px; padding: 10px; border-radius: 22px; background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03)); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.2); box-shadow: 0 12px 36px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.4);">
-          <img src="/yukiyanart_logo.jpg" alt="yukiyanArt Official Logo" style="width: 88px; height: 88px; object-fit: cover; border-radius: 16px; display: block; box-shadow: 0 4px 16px rgba(0,0,0,0.5);" />
-        </div>
-        <div style="font-size: 1.35rem; font-weight: 700; color: #f8fafc; letter-spacing: 2.5px; margin-bottom: 4px; text-shadow: 0 2px 10px rgba(0,0,0,0.5);">yukiyanArt</div>
-        <div style="font-size: 0.82rem; color: #38bdf8; letter-spacing: 1.5px; opacity: 0.9;">Chronos アプリを起動中...</div>
+      <!-- 起動時の yukiyanArt フルHD 16:9 全画面スプラッシュアニメーション -->
+      <div style="position: fixed; inset: 0; width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; background: #0f172a; overflow: hidden; z-index: 99999;">
+        <img src="/yukiyanart_splash_fhd.jpg" alt="yukiyanArt Full HD Splash Logo" style="width: 100%; height: 100%; object-fit: contain; aspect-ratio: 16 / 9; max-width: 100vw; max-height: 100vh; display: block;" />
       </div>
     </div>
     <script type="module" src="/src/main.tsx"></script>
