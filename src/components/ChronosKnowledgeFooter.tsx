@@ -114,8 +114,9 @@ export const ChronosKnowledgeFooter: React.FC = () => {
                         <Sparkles size={14} style={{ color: '#38bdf8' }} />
                         Chronos は個人のプライバシーを尊重し、安心・快適に利用できる無料高機能Webツールを提供しています。
                     </span>
-                    <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>
-                        © Chronos Productivity Platform
+                    <span style={{ color: '#94a3b8', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <img src="/yukiyanart_logo.jpg" alt="yukiyanArt Logo" style={{ width: '20px', height: '20px', borderRadius: '4px', objectFit: 'cover' }} />
+                        © yukiyanArt / Chronos Productivity Platform
                     </span>
                 </div>
             </div>
