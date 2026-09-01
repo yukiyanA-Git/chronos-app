@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Database, AlertTriangle, Download, Upload, Trash2, Palette, FileSpreadsheet, FileText } from 'lucide-react';
+import { Database, AlertTriangle, Download, Upload, Trash2, Palette, FileSpreadsheet, FileText, MessageSquare, ExternalLink } from 'lucide-react';
 
 // プリセット背景色（ダーク系）
 const BG_PRESETS_DARK = [
@@ -332,6 +332,49 @@ export const Settings: React.FC<SettingsProps> = ({ onExportClick }) => {
                 </div>
 
 
+
+                {/* 💬 yukiyanArt 共通デザイン 'Dark Glassmorphism' サポート・フィードバック窓口 */}
+                <div className="settings-card glass feedback-card" style={{
+                    background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.85) 100%)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.36), inset 0 1px 1px rgba(255, 255, 255, 0.25)',
+                    backdropFilter: 'blur(16px)',
+                    borderRadius: '16px',
+                    padding: '20px'
+                }}>
+                    <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#38bdf8', fontSize: '1.15rem' }}>
+                        <MessageSquare size={20} /> yukiyanArt サポート ＆ フィードバック
+                    </h2>
+                    <p className="description" style={{ color: '#cbd5e1', marginBottom: '16px' }}>
+                        Chronos アプリに関するご意見・ご要望・不具合のご報告・新機能リクエストは、yukiyanArt 共通サポート窓口にて24時間受付けております。
+                    </p>
+
+                    <button
+                        type="button"
+                        className="dark-glassmorphism-btn"
+                        onClick={() => window.open('https://yukiyanart-feedback-hub.web.app/?app_id=chronos', '_blank', 'noopener,noreferrer')}
+                        style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            padding: '14px 24px',
+                            borderRadius: '12px',
+                            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.04) 100%)',
+                            backdropFilter: 'blur(12px)',
+                            border: '1px solid rgba(255, 255, 255, 0.25)',
+                            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.4)',
+                            color: '#ffffff',
+                            fontSize: '0.98rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
+                        }}
+                    >
+                        <span style={{ fontSize: '1.2rem' }}>💬</span>
+                        <span>ご意見・ご要望・サポート窓口</span>
+                        <ExternalLink size={16} style={{ marginLeft: '4px', opacity: 0.8 }} />
+                    </button>
+                </div>
 
                 {/* リセット */}
                 <div className="settings-card glass">
