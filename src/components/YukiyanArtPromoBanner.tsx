@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, ChevronRight, ExternalLink, Sparkles, Layers } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ExternalLink, Sparkles } from 'lucide-react';
 
 export interface PromoApp {
     id: string;
@@ -7,12 +7,13 @@ export interface PromoApp {
     subName?: string;
     category?: string;
     desc: string;
-    imageIcon?: string;
-    fallbackIcon?: string;
+    imageIcon: string;
     color?: string;
 }
 
-// 【yukiyanArt 公式10作品マスターリスト】 (正確な公式データ)
+const FALLBACK_LOGO_URL = 'https://yukiyanart-feedback-hub.web.app/assets/icons/yukiyanart_logo.jpg';
+
+// 【yukiyanArt 公式10作品マスターリスト】 (全10作品 公式アイコンWeb URL完全適用)
 const OFFICIAL_10_YUKIYANART_APPS: PromoApp[] = [
     {
         id: 'chronos',
@@ -65,7 +66,7 @@ const OFFICIAL_10_YUKIYANART_APPS: PromoApp[] = [
         subName: 'マルチモニター仮想画面管理',
         category: 'システム・ディスプレイ',
         desc: 'マルチディスプレイのレイアウトとサブモニター仮想画面配置を最適化するツール',
-        imageIcon: 'https://yukiyanart-feedback-hub.web.app/assets/icons/yukiyanart_chic_badge.jpg',
+        imageIcon: 'https://yukiyanart-feedback-hub.web.app/assets/icons/sub_monitor_manager.png',
         color: '#6366F1'
     },
     {
@@ -74,7 +75,7 @@ const OFFICIAL_10_YUKIYANART_APPS: PromoApp[] = [
         subName: '入力デバイス・キーバインド統合管理',
         category: 'ユーティリティ・入力',
         desc: 'キーボード・マウス・各種入力デバイスのカスタムマッピングと統合管理',
-        imageIcon: 'https://yukiyanart-feedback-hub.web.app/assets/icons/yukiyanart_logo.jpg',
+        imageIcon: 'https://yukiyanart-feedback-hub.web.app/assets/icons/input_nexus.jpg',
         color: '#0284C7'
     },
     {
@@ -83,7 +84,7 @@ const OFFICIAL_10_YUKIYANART_APPS: PromoApp[] = [
         subName: '常駐ニュース＆雨雲・PCモニター',
         category: 'デスクトップ・ニュース',
         desc: 'デスクトップ上に常駐し、最新ニュース・リアルタイム雨雲レーダー・PC負荷状況を表示',
-        imageIcon: 'https://yukiyanart-feedback-hub.web.app/assets/icons/yukiyana_logo.jpg',
+        imageIcon: 'https://yukiyanart-feedback-hub.web.app/assets/icons/widget_de_news.png',
         color: '#3B82F6'
     },
     {
@@ -92,7 +93,7 @@ const OFFICIAL_10_YUKIYANART_APPS: PromoApp[] = [
         subName: 'スライド×数独 脳トレパズル',
         category: 'ゲーム・パズル',
         desc: 'スライドパズルと数独（ナンプレ）を組み合わせた新感覚の思考型脳トレパズルゲーム',
-        imageIcon: 'https://yukiyanart-feedback-hub.web.app/assets/icons/yukiyanart_logo.jpg',
+        imageIcon: 'https://yukiyanart-feedback-hub.web.app/assets/icons/numpre_shift.png',
         color: '#10B981'
     },
     {
@@ -101,7 +102,7 @@ const OFFICIAL_10_YUKIYANART_APPS: PromoApp[] = [
         subName: '六角形グリッド防衛戦略',
         category: 'ゲーム・ストラテジー',
         desc: 'ヘキサゴン（六角形）マップ上で繰り広げられるシミュレーション防衛ストラテジーゲーム',
-        imageIcon: 'https://yukiyanart-feedback-hub.web.app/assets/icons/yukiyanart_splash_fhd.jpg',
+        imageIcon: 'https://yukiyanart-feedback-hub.web.app/assets/icons/hex_bastion.jpg',
         color: '#EF4444'
     }
 ];
@@ -261,7 +262,7 @@ export const YukiyanArtPromoBanner: React.FC = () => {
                     flex: '1 1 300px',
                     minWidth: 0
                 }}>
-                    {/* アイコン */}
+                    {/* 公式 Web アイコン */}
                     <div style={{
                         width: '46px',
                         height: '46px',
@@ -275,18 +276,18 @@ export const YukiyanArtPromoBanner: React.FC = () => {
                         flexShrink: 0,
                         boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
                     }}>
-                        {currentApp.imageIcon ? (
-                            <img
-                                src={currentApp.imageIcon}
-                                alt={currentApp.name}
-                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                onError={(e) => {
-                                    (e.target as HTMLElement).style.display = 'none';
-                                }}
-                            />
-                        ) : (
-                            <Layers size={22} style={{ color: currentApp.color || '#38bdf8' }} />
-                        )}
+                        <img
+                            key={currentApp.id}
+                            src={currentApp.imageIcon || FALLBACK_LOGO_URL}
+                            alt={currentApp.name}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                            onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                if (target.src !== FALLBACK_LOGO_URL) {
+                                    target.src = FALLBACK_LOGO_URL;
+                                }
+                            }}
+                        />
                     </div>
 
                     {/* アプリ名・テキスト */}
