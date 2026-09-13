@@ -12,13 +12,23 @@ export interface PromoApp {
     color?: string;
 }
 
-const DEFAULT_PROMO_APPS: PromoApp[] = [
+// yukiyanArt ブランド全9アプリ統合マスターリスト (Chronosを含む9アプリ)
+const FULL_YUKIYANART_APPS: PromoApp[] = [
+    {
+        id: 'chronos',
+        name: 'Chronos',
+        subName: 'カレンダー＆付箋メモ',
+        category: 'スケジュール・生産性',
+        desc: 'タイムブロック型カレンダーとデジタル付箋を融合した yukiyanArt 旗艦アプリ',
+        imageIcon: 'https://yukiyanart-feedback-hub.web.app/assets/icons/chronos.png',
+        color: '#4F46E5'
+    },
     {
         id: 'desk_chat',
         name: 'Desk Chat',
         subName: 'デスクチャット',
         category: 'コミュニケーション',
-        desc: 'デスク上で作業しながら快適にチャット＆連絡できるスリムツール',
+        desc: 'デスク上で作業しながら快適にメッセージ送受信できるスリムチャットツール',
         imageIcon: 'https://yukiyanart-feedback-hub.web.app/assets/icons/desk_chat.png',
         color: '#059669'
     },
@@ -27,7 +37,7 @@ const DEFAULT_PROMO_APPS: PromoApp[] = [
         name: 'LoginManager',
         subName: 'パスワード＆ログイン管理',
         category: 'セキュリティ',
-        desc: '暗号化された安全なパスワード保管庫と一発ログインアシスタント',
+        desc: '暗号化された安全なパスワード保管庫と一発ログインアシスタントツール',
         imageIcon: 'https://yukiyanart-feedback-hub.web.app/assets/icons/pass_manager.png',
         color: '#D97706'
     },
@@ -45,11 +55,50 @@ const DEFAULT_PROMO_APPS: PromoApp[] = [
         name: 'STRATEGYNOTE',
         subName: '戦略思考・マインドメモ',
         category: '思考整理',
-        desc: 'アイデアや思考の整理を視覚的にサポートする戦略ノートツール',
+        desc: 'アイデアや戦略思考の整理を視覚的にサポートするナレッジノートツール',
         imageIcon: 'https://yukiyanart-feedback-hub.web.app/assets/icons/strategy_note.jpg',
         color: '#8B5CF6'
+    },
+    {
+        id: 'device_controller',
+        name: 'DeviceController',
+        subName: 'マルチデバイス遠隔操作',
+        category: 'システム・機器管理',
+        desc: '社内端末やスマートデバイスを一括モニター・遠隔制御する総合マネージャー',
+        imageIcon: 'https://yukiyanart-feedback-hub.web.app/assets/icons/yukiyanart_logo.jpg',
+        color: '#0284C7'
+    },
+    {
+        id: 'sub_monitor',
+        name: 'SubMonitorManager',
+        subName: 'サブモニター・画面拡張',
+        category: 'ディスプレイ管理',
+        desc: 'マルチディスプレイのレイアウトとサブモニター配置を最適化するツール',
+        imageIcon: 'https://yukiyanart-feedback-hub.web.app/assets/icons/yukiyanart_chic_badge.jpg',
+        color: '#6366F1'
+    },
+    {
+        id: 'shift_board',
+        name: 'ShiftBoard',
+        subName: 'シフト・人員配置ボード',
+        category: '業務・労務管理',
+        desc: 'メンバーの勤務シフトやプロジェクト人員配分を直感的に組める管理ボード',
+        imageIcon: 'https://yukiyanart-feedback-hub.web.app/assets/icons/yukiyana_logo.jpg',
+        color: '#10B981'
+    },
+    {
+        id: 'micro_office',
+        name: 'MicroOfficeChat',
+        subName: 'バーチャルオフィス・小部屋',
+        category: 'チームワーク',
+        desc: 'チーム全員が同じ仮想空間に集まり、声掛け・雑談・コラボできる小部屋ツール',
+        imageIcon: 'https://yukiyanart-feedback-hub.web.app/assets/icons/yukiyanart_splash_fhd.jpg',
+        color: '#F59E0B'
     }
 ];
+
+// 自アプリ (chronos) を自動除外した全8作品のプロモローテーションリスト
+const DEFAULT_PROMO_APPS = FULL_YUKIYANART_APPS.filter(app => app.id !== 'chronos');
 
 export const YukiyanArtPromoBanner: React.FC = () => {
     const [apps, setApps] = useState<PromoApp[]>(DEFAULT_PROMO_APPS);
@@ -72,8 +121,8 @@ export const YukiyanArtPromoBanner: React.FC = () => {
                     }
                 }
             } catch (err) {
-                // オフライン・取得失敗時はデフォルトリストを使用
-                console.log('Using default promo apps list:', err);
+                // オフライン・取得失敗時は全9アプリのデフォルトリストを使用
+                console.log('Using full default promo apps list:', err);
             }
         };
 
@@ -130,7 +179,7 @@ export const YukiyanArtPromoBanner: React.FC = () => {
                 overflow: 'hidden'
             }}
         >
-            {/* 上部ヘッダーバッジ */}
+            {/* 上部ヘッダーバッジ ＆ スライドインジケーター */}
             <div style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -141,7 +190,7 @@ export const YukiyanArtPromoBanner: React.FC = () => {
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: '#38bdf8', fontWeight: 600, letterSpacing: '0.5px' }}>
                     <Sparkles size={13} style={{ color: '#38bdf8' }} />
-                    <span>yukiyanArt 公式プロダクト・アプリ連携</span>
+                    <span>yukiyanArt 公式プロダクト (全9作品連携中)</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                     {apps.map((_, idx) => (
@@ -158,7 +207,7 @@ export const YukiyanArtPromoBanner: React.FC = () => {
                                 transition: 'all 0.3s ease',
                                 padding: 0
                             }}
-                            title={`スライド ${idx + 1}`}
+                            title={`アプリ ${idx + 1} / ${apps.length}`}
                         />
                     ))}
                 </div>
