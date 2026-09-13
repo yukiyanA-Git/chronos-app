@@ -2,6 +2,7 @@ import React, { useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { Calendar, BookOpen, Plus, Smile, StickyNote, X, Pin, Archive } from 'lucide-react';
 import { ChronosWidgetPanel } from './ChronosWidgetPanel';
+import { YukiyanArtPromoBanner } from './YukiyanArtPromoBanner';
 
 interface DashboardProps {
     onViewChange: (view: string) => void;
@@ -268,6 +269,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onAddEventCl
                     </div>
                 </div>
             </div>
+
+            {/* 🚀 yukiyanArt 公式自社アプリ紹介プロモーションバナー (ダッシュボード最下部) */}
+            <YukiyanArtPromoBanner />
         </section>
     );
 };
