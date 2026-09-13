@@ -12,7 +12,7 @@ export interface PromoApp {
     color?: string;
 }
 
-// yukiyanArt ブランド全9アプリ統合マスターリスト (Chronosを含む9アプリ)
+// yukiyanArt ブランド全10アプリ統合マスターリスト (Chronosを含む全10作品)
 const FULL_YUKIYANART_APPS: PromoApp[] = [
     {
         id: 'chronos',
@@ -94,10 +94,19 @@ const FULL_YUKIYANART_APPS: PromoApp[] = [
         desc: 'チーム全員が同じ仮想空間に集まり、声掛け・雑談・コラボできる小部屋ツール',
         imageIcon: 'https://yukiyanart-feedback-hub.web.app/assets/icons/yukiyanart_splash_fhd.jpg',
         color: '#F59E0B'
+    },
+    {
+        id: 'schedule_app',
+        name: 'ScheduleApp',
+        subName: 'タスク＆スケジュールノート',
+        category: 'タスク・時間管理',
+        desc: 'デイリータスクとタイムライン調整をスマートにこなせるスケジュールノート',
+        imageIcon: 'https://yukiyanart-feedback-hub.web.app/assets/icons/chronos.png',
+        color: '#14B8A6'
     }
 ];
 
-// 自アプリ (chronos) を自動除外した全8作品のプロモローテーションリスト
+// 自アプリ (chronos) を自動除外した全9作品のプロモローテーションリスト
 const DEFAULT_PROMO_APPS = FULL_YUKIYANART_APPS.filter(app => app.id !== 'chronos');
 
 export const YukiyanArtPromoBanner: React.FC = () => {
@@ -121,7 +130,7 @@ export const YukiyanArtPromoBanner: React.FC = () => {
                     }
                 }
             } catch (err) {
-                // オフライン・取得失敗時は全9アプリのデフォルトリストを使用
+                // オフライン・取得失敗時は全10アプリ(他9作品)のデフォルトリストを使用
                 console.log('Using full default promo apps list:', err);
             }
         };
@@ -190,7 +199,7 @@ export const YukiyanArtPromoBanner: React.FC = () => {
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: '#38bdf8', fontWeight: 600, letterSpacing: '0.5px' }}>
                     <Sparkles size={13} style={{ color: '#38bdf8' }} />
-                    <span>yukiyanArt 公式プロダクト (全9作品連携中)</span>
+                    <span>yukiyanArt 公式プロダクト (他 {apps.length} 作品ローテーション中)</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                     {apps.map((_, idx) => (
