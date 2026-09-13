@@ -12,8 +12,8 @@ export interface PromoApp {
     color?: string;
 }
 
-// yukiyanArt ブランド全10アプリ統合マスターリスト (Chronosを含む全10作品)
-const FULL_YUKIYANART_APPS: PromoApp[] = [
+// 【yukiyanArt 公式10作品マスターリスト】 (正確な公式データ)
+const OFFICIAL_10_YUKIYANART_APPS: PromoApp[] = [
     {
         id: 'chronos',
         name: 'Chronos',
@@ -35,8 +35,8 @@ const FULL_YUKIYANART_APPS: PromoApp[] = [
     {
         id: 'login_manager',
         name: 'LoginManager',
-        subName: 'パスワード＆ログイン管理',
-        category: 'セキュリティ',
+        subName: 'ログイン＆パスワード管理',
+        category: 'セキュリティ・管理',
         desc: '暗号化された安全なパスワード保管庫と一発ログインアシスタントツール',
         imageIcon: 'https://yukiyanart-feedback-hub.web.app/assets/icons/pass_manager.png',
         color: '#D97706'
@@ -44,70 +44,70 @@ const FULL_YUKIYANART_APPS: PromoApp[] = [
     {
         id: 'aura_gallery',
         name: 'AURAGALLERY',
-        subName: '3D美術室・バーチャル個室',
-        category: 'アート・3D個室',
-        desc: '作品を3Dアクリル額縁で飾る全公開個室ポータル＆バーチャル展示室',
+        subName: 'デジタルアート美術室',
+        category: 'アート・バーチャルギャラリー',
+        desc: '作品を3Dアクリル額縁で飾る全公開個室ポータル＆バーチャル展示室アプリ',
         imageIcon: 'https://yukiyanart-feedback-hub.web.app/assets/icons/aura_gallery.jpg',
         color: '#EC4899'
     },
     {
         id: 'strategy_note',
         name: 'STRATEGYNOTE',
-        subName: '戦略思考・マインドメモ',
-        category: '思考整理',
-        desc: 'アイデアや戦略思考の整理を視覚的にサポートするナレッジノートツール',
+        subName: '戦略思考・マインドマップメモ',
+        category: 'アイディア・思考整理',
+        desc: '戦略的な思考整理とマインドマップ風ノート作成を行えるナレッジツール',
         imageIcon: 'https://yukiyanart-feedback-hub.web.app/assets/icons/strategy_note.jpg',
         color: '#8B5CF6'
     },
     {
-        id: 'device_controller',
-        name: 'DeviceController',
-        subName: 'マルチデバイス遠隔操作',
-        category: 'システム・機器管理',
-        desc: '社内端末やスマートデバイスを一括モニター・遠隔制御する総合マネージャー',
-        imageIcon: 'https://yukiyanart-feedback-hub.web.app/assets/icons/yukiyanart_logo.jpg',
-        color: '#0284C7'
-    },
-    {
-        id: 'sub_monitor',
+        id: 'sub_monitor_manager',
         name: 'SubMonitorManager',
-        subName: 'サブモニター・画面拡張',
-        category: 'ディスプレイ管理',
-        desc: 'マルチディスプレイのレイアウトとサブモニター配置を最適化するツール',
+        subName: 'マルチモニター仮想画面管理',
+        category: 'システム・ディスプレイ',
+        desc: 'マルチディスプレイのレイアウトとサブモニター仮想画面配置を最適化するツール',
         imageIcon: 'https://yukiyanart-feedback-hub.web.app/assets/icons/yukiyanart_chic_badge.jpg',
         color: '#6366F1'
     },
     {
-        id: 'shift_board',
-        name: 'ShiftBoard',
-        subName: 'シフト・人員配置ボード',
-        category: '業務・労務管理',
-        desc: 'メンバーの勤務シフトやプロジェクト人員配分を直感的に組める管理ボード',
+        id: 'input_nexus',
+        name: 'InputNexus',
+        subName: '入力デバイス・キーバインド統合管理',
+        category: 'ユーティリティ・入力',
+        desc: 'キーボード・マウス・各種入力デバイスのカスタムマッピングと統合管理',
+        imageIcon: 'https://yukiyanart-feedback-hub.web.app/assets/icons/yukiyanart_logo.jpg',
+        color: '#0284C7'
+    },
+    {
+        id: 'widget_de_news',
+        name: 'widgetでnews',
+        subName: '常駐ニュース＆雨雲・PCモニター',
+        category: 'デスクトップ・ニュース',
+        desc: 'デスクトップ上に常駐し、最新ニュース・リアルタイム雨雲レーダー・PC負荷状況を表示',
         imageIcon: 'https://yukiyanart-feedback-hub.web.app/assets/icons/yukiyana_logo.jpg',
+        color: '#3B82F6'
+    },
+    {
+        id: 'numpre_shift',
+        name: '動くナンプレ',
+        subName: 'スライド×数独 脳トレパズル',
+        category: 'ゲーム・パズル',
+        desc: 'スライドパズルと数独（ナンプレ）を組み合わせた新感覚の思考型脳トレパズルゲーム',
+        imageIcon: 'https://yukiyanart-feedback-hub.web.app/assets/icons/yukiyanart_logo.jpg',
         color: '#10B981'
     },
     {
-        id: 'micro_office',
-        name: 'MicroOfficeChat',
-        subName: 'バーチャルオフィス・小部屋',
-        category: 'チームワーク',
-        desc: 'チーム全員が同じ仮想空間に集まり、声掛け・雑談・コラボできる小部屋ツール',
+        id: 'hex_bastion',
+        name: 'HEX BASTION',
+        subName: '六角形グリッド防衛戦略',
+        category: 'ゲーム・ストラテジー',
+        desc: 'ヘキサゴン（六角形）マップ上で繰り広げられるシミュレーション防衛ストラテジーゲーム',
         imageIcon: 'https://yukiyanart-feedback-hub.web.app/assets/icons/yukiyanart_splash_fhd.jpg',
-        color: '#F59E0B'
-    },
-    {
-        id: 'schedule_app',
-        name: 'ScheduleApp',
-        subName: 'タスク＆スケジュールノート',
-        category: 'タスク・時間管理',
-        desc: 'デイリータスクとタイムライン調整をスマートにこなせるスケジュールノート',
-        imageIcon: 'https://yukiyanart-feedback-hub.web.app/assets/icons/chronos.png',
-        color: '#14B8A6'
+        color: '#EF4444'
     }
 ];
 
 // 自アプリ (chronos) を自動除外した全9作品のプロモローテーションリスト
-const DEFAULT_PROMO_APPS = FULL_YUKIYANART_APPS.filter(app => app.id !== 'chronos');
+const DEFAULT_PROMO_APPS = OFFICIAL_10_YUKIYANART_APPS.filter(app => app.id !== 'chronos');
 
 export const YukiyanArtPromoBanner: React.FC = () => {
     const [apps, setApps] = useState<PromoApp[]>(DEFAULT_PROMO_APPS);
@@ -130,8 +130,8 @@ export const YukiyanArtPromoBanner: React.FC = () => {
                     }
                 }
             } catch (err) {
-                // オフライン・取得失敗時は全10アプリ(他9作品)のデフォルトリストを使用
-                console.log('Using full default promo apps list:', err);
+                // オフライン・通信エラー時は公式マスターリストを使用
+                console.log('Using official fallback promo apps list:', err);
             }
         };
 
