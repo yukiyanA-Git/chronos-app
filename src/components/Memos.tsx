@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import {
-    StickyNote, RotateCcw, CalendarDays, Trash2,
+    StickyNote, CalendarDays, Trash2,
     FolderPlus, Folder, FolderOpen, ChevronDown, ChevronRight,
-    Pencil, Check, X, FolderInput, Plus, FileSpreadsheet
+    Pencil, Check, X, FolderInput, Plus, FileSpreadsheet, Pin
 } from 'lucide-react';
 
 const FOLDER_COLORS = [
@@ -21,7 +21,7 @@ interface MemosProps {
 
 export const Memos: React.FC<MemosProps> = ({ onExportClick }) => {
     const {
-        data, addSticky, deleteSticky, unarchiveSticky, attachStickyToDate, updateSticky,
+        data, addSticky, deleteSticky, attachStickyToDate, updateSticky, pinSticky,
         addStickyFolder, renameStickyFolder, deleteStickyFolder, moveStickyToFolder,
         draftStickyText, draftStickyColor, setDraftStickyText, setDraftStickyColor, clearDraftSticky
     } = useApp();
@@ -43,8 +43,8 @@ export const Memos: React.FC<MemosProps> = ({ onExportClick }) => {
     const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
     const [editFolderName, setEditFolderName] = useState('');
 
-    // 展開中フォルダー
-    const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+    // 展開中フォルダー (初期状態でスマートフォルダーを展開)
+    const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['smart-dashboard', 'smart-calendar']));
 
     // 付箋移動ドロップダウン
     const [movingSticky, setMovingSticky] = useState<string | null>(null);
@@ -96,12 +96,22 @@ export const Memos: React.FC<MemosProps> = ({ onExportClick }) => {
         });
     };
 
-    // フォルダー内の付箋
+    // フォルダー内の付箋 (ユーザー作成フォルダー)
     const getStickiesInFolder = (folderId: string) =>
-        archivedStickies.filter(s => s.folderId === folderId);
+        archivedStickies.filter(s => s.folderId === folderId && !s.attachedDate);
 
-    // フォルダーなしの付箋
-    const uncategorized = archivedStickies.filter(s => !s.folderId);
+    // 1. カレンダー連動スマートフォルダー（日付が貼られている付箋・上限なし）
+    const calendarStickies = archivedStickies.filter(s => !!s.attachedDate);
+
+    // 2. クイックデスク・スマートフォルダー（ダッシュボードに現在選抜・表示されている最大10枚）
+    const candidateStickies = archivedStickies.filter(s => !s.attachedDate && !s.folderId);
+    const pinnedStickies = candidateStickies.filter(s => s.pinned);
+    const unpinnedStickies = candidateStickies.filter(s => !s.pinned);
+    const dashboardStickies = [...pinnedStickies, ...unpinnedStickies.slice(0, Math.max(0, 10 - pinnedStickies.length))];
+    const dashboardStickyIds = new Set(dashboardStickies.map(s => s.id));
+
+    // 3. 未分類・保管ストック（どのフォルダーにも属さず、カレンダーにも貼られず、ダッシュボード上限からも押し出された付箋）
+    const uncategorized = archivedStickies.filter(s => !s.folderId && !s.attachedDate && !dashboardStickyIds.has(s.id));
 
     // 付箋カード（再利用）
     const StickyCard = ({ s }: { s: typeof archivedStickies[0] }) => (
@@ -110,6 +120,9 @@ export const Memos: React.FC<MemosProps> = ({ onExportClick }) => {
                 <div className="sticky-color-dot" style={{ background: s.color }} />
                 {s.attachedDate && (
                     <span className="sticky-board-date-tag">📅 {s.attachedDate}</span>
+                )}
+                {s.pinned && (
+                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#f59e0b', marginLeft: '4px' }}>📌 ピン留め中</span>
                 )}
                 <div className="sticky-board-actions">
                     {/* フォルダーに移動 */}
@@ -150,13 +163,14 @@ export const Memos: React.FC<MemosProps> = ({ onExportClick }) => {
                     >
                         <CalendarDays size={14} />
                     </button>
-                    {/* ダッシュボードに戻す */}
+                    {/* ダッシュボードにピン留め / 解除 */}
                     <button
                         className="sticky-board-action-btn"
-                        title="ダッシュボードに戻す"
-                        onClick={() => unarchiveSticky(s.id)}
+                        style={s.pinned ? { color: '#f59e0b', background: 'rgba(245, 158, 11, 0.2)' } : {}}
+                        title={s.pinned ? 'ピン留め解除（ダッシュボード固定を外す）' : 'ピン留め（ダッシュボードに優先固定）'}
+                        onClick={() => pinSticky(s.id, !s.pinned)}
                     >
-                        <RotateCcw size={14} />
+                        <Pin size={14} />
                     </button>
                     {/* 削除 */}
                     <button
@@ -310,10 +324,93 @@ export const Memos: React.FC<MemosProps> = ({ onExportClick }) => {
                 </div>
             ) : (
                 <div className="sticky-board-content">
+                    {/* スマートフォルダーセクション (自動集約トレイ) */}
+                    <div className="folder-section smart-folders-section" style={{ marginBottom: '16px' }}>
+                        {/* 1. クイックデスク（ダッシュボード常駐・上限10枚） */}
+                        <div className={`folder-card smart-folder ${expandedFolders.has('smart-dashboard') ? 'open' : ''}`} style={{ marginBottom: '12px' }}>
+                            <div
+                                className="folder-tab"
+                                style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', boxShadow: '0 4px 14px rgba(2, 132, 199, 0.3)' }}
+                                onClick={() => toggleFolder('smart-dashboard')}
+                            >
+                                {expandedFolders.has('smart-dashboard') ? <FolderOpen size={16} /> : <Folder size={16} />}
+                                <span className="folder-tab-name" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <Pin size={14} style={{ color: '#fde047' }} />
+                                    クイックデスク（ダッシュボード常駐）
+                                </span>
+                                <span className="folder-count-badge" style={{ background: 'rgba(255,255,255,0.25)', fontWeight: 700 }}>
+                                    {dashboardStickies.length}/10枚
+                                </span>
+                                <span style={{ fontSize: '0.75rem', opacity: 0.85, marginLeft: 'auto', marginRight: '8px' }}>
+                                    ピン優先・上限10枚
+                                </span>
+                                <div className="folder-chevron">
+                                    {expandedFolders.has('smart-dashboard') ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                                </div>
+                            </div>
+                            <div className="folder-body" style={{ borderColor: 'rgba(2, 132, 199, 0.4)' }}>
+                                {expandedFolders.has('smart-dashboard') && (
+                                    dashboardStickies.length === 0 ? (
+                                        <div className="folder-empty">
+                                            <StickyNote size={28} style={{ opacity: 0.3 }} />
+                                            <p>ダッシュボードに表示中の付箋はありません</p>
+                                            <p style={{ fontSize: '0.75rem', opacity: 0.5 }}>付箋の 📌 ピン留めを押すか、新規作成すると自動でここに集まります（最大10枚）</p>
+                                        </div>
+                                    ) : (
+                                        <div className="sticky-board-grid">
+                                            {dashboardStickies.map(s => <StickyCard key={s.id} s={s} />)}
+                                        </div>
+                                    )
+                                )}
+                            </div>
+                        </div>
 
-                    {/* フォルダーセクション */}
+                        {/* 2. カレンダー連動（スケジュール貼付・上限なし） */}
+                        <div className={`folder-card smart-folder ${expandedFolders.has('smart-calendar') ? 'open' : ''}`} style={{ marginBottom: '12px' }}>
+                            <div
+                                className="folder-tab"
+                                style={{ background: 'linear-gradient(135deg, #059669 0%, #047857 100%)', boxShadow: '0 4px 14px rgba(5, 150, 105, 0.3)' }}
+                                onClick={() => toggleFolder('smart-calendar')}
+                            >
+                                {expandedFolders.has('smart-calendar') ? <FolderOpen size={16} /> : <Folder size={16} />}
+                                <span className="folder-tab-name" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <CalendarDays size={14} style={{ color: '#a7f3d0' }} />
+                                    カレンダー連動（スケジュール貼付）
+                                </span>
+                                <span className="folder-count-badge" style={{ background: 'rgba(255,255,255,0.25)', fontWeight: 700 }}>
+                                    {calendarStickies.length}枚
+                                </span>
+                                <span style={{ fontSize: '0.75rem', opacity: 0.85, marginLeft: 'auto', marginRight: '8px' }}>
+                                    上限なし
+                                </span>
+                                <div className="folder-chevron">
+                                    {expandedFolders.has('smart-calendar') ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                                </div>
+                            </div>
+                            <div className="folder-body" style={{ borderColor: 'rgba(5, 150, 105, 0.4)' }}>
+                                {expandedFolders.has('smart-calendar') && (
+                                    calendarStickies.length === 0 ? (
+                                        <div className="folder-empty">
+                                            <StickyNote size={28} style={{ opacity: 0.3 }} />
+                                            <p>カレンダーに貼り付けられた付箋はありません</p>
+                                            <p style={{ fontSize: '0.75rem', opacity: 0.5 }}>付箋の 📅 カレンダーアイコンから日付に貼り付けると、自動でここに集約されます</p>
+                                        </div>
+                                    ) : (
+                                        <div className="sticky-board-grid">
+                                            {calendarStickies.map(s => <StickyCard key={s.id} s={s} />)}
+                                        </div>
+                                    )
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* ユーザー作成フォルダーセクション */}
                     {folders.length > 0 && (
-                        <div className="folder-section">
+                        <div className="folder-section" style={{ marginBottom: '16px' }}>
+                            <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#94a3b8', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <Folder size={15} /> マイフォルダー
+                            </div>
                             {folders.map(folder => {
                                 const isOpen = expandedFolders.has(folder.id);
                                 const folderStickies = getStickiesInFolder(folder.id);
@@ -389,14 +486,12 @@ export const Memos: React.FC<MemosProps> = ({ onExportClick }) => {
                         </div>
                     )}
 
-                    {/* フォルダーなしの付箋 */}
+                    {/* 未分類・保管ストック（押し出された付箋やどこにも属さないメモ） */}
                     {uncategorized.length > 0 && (
                         <div className="uncategorized-section">
-                            {folders.length > 0 && (
-                                <div className="uncategorized-label">
-                                    <StickyNote size={14} /> 未分類
-                                </div>
-                            )}
+                            <div className="uncategorized-label" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '8px' }}>
+                                <StickyNote size={14} /> 未分類・保管ストック ({uncategorized.length}枚)
+                            </div>
                             <div className="sticky-board-grid">
                                 {uncategorized.map(s => <StickyCard key={s.id} s={s} />)}
                             </div>
