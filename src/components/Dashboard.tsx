@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { useApp } from '../context/AppContext';
-import { Calendar, BookOpen, Plus, Smile, StickyNote, X, Pin, Archive } from 'lucide-react';
+import { Calendar, BookOpen, Plus, Smile, StickyNote, X, Pin } from 'lucide-react';
 import { ChronosWidgetPanel } from './ChronosWidgetPanel';
 import { YukiyanArtPromoBanner } from './YukiyanArtPromoBanner';
 
@@ -22,7 +22,7 @@ const STICKY_COLORS = [
 
 export const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onAddEventClick }) => {
     const {
-        data, addSticky, updateSticky, deleteSticky, pinSticky, archiveSticky,
+        data, addSticky, updateSticky, deleteSticky, pinSticky,
         draftStickyText, draftStickyColor, setDraftStickyText, setDraftStickyColor, clearDraftSticky
     } = useApp();
     const debounceTimers = useRef<{ [id: string]: ReturnType<typeof setTimeout> }>({});
@@ -67,9 +67,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onAddEventCl
         }, 500);
     };
 
-    // ダッシュボードには未保管・未フォルダー・カレンダー未貼付の日常付箋のみ表示
-    const stickies = (data.stickies || []).filter(s => !s.archived && !s.folderId && !s.attachedDate);
-    const sortedStickies = [...stickies.filter(s => s.pinned), ...stickies.filter(s => !s.pinned)];
+    // ダッシュボード対象付箋:
+    // 1. ピン留めされている付箋（s.pinned === true）
+    // 2. カレンダー未貼付かつフォルダー未設定の通常付箋（!s.attachedDate && !s.folderId）
+    // ※ ピン留め付箋を最優先。空いた枠に未ピン付箋の最新順を配置（最大10枚の上限・押し出しルール）
+    const allCandidateStickies = (data.stickies || []).filter(s => !s.attachedDate && !s.folderId);
+    const pinnedStickies = allCandidateStickies.filter(s => s.pinned);
+    const unpinnedStickies = allCandidateStickies.filter(s => !s.pinned);
+
+    const maxDashboardLimit = 10;
+    const availableSlotsForUnpinned = Math.max(0, maxDashboardLimit - pinnedStickies.length);
+    const activeUnpinnedStickies = unpinnedStickies.slice(0, availableSlotsForUnpinned);
+    const sortedStickies = [...pinnedStickies, ...activeUnpinnedStickies];
+    const overflowCount = Math.max(0, unpinnedStickies.length - availableSlotsForUnpinned);
 
     return (
         <section id="view-dashboard" className="view-section active">
@@ -165,13 +175,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onAddEventCl
                     </div>
                 </div>
 
-                {/* 付箋ボード（全幅・2段階ボタン） */}
+                {/* 付箋ボード（全幅・上限10枚押し出し式） */}
                 <div className="dashboard-card glass sticky-board-card">
-                    <div className="card-header">
-                        <h2><StickyNote size={20} /> 付箋ボード</h2>
+                    <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <h2>
+                            <StickyNote size={20} /> デスク付箋
+                            <span style={{ fontSize: '0.85rem', fontWeight: 500, opacity: 0.8, marginLeft: '8px' }}>
+                                ({sortedStickies.length}/10枚)
+                            </span>
+                        </h2>
                         <div className="sticky-board-legend">
-                            <span className="legend-item"><Pin size={12} /> ピン止め</span>
-                            <span className="legend-item"><Archive size={12} /> 長期保存</span>
+                            <span className="legend-item"><Pin size={12} /> ピン止め優先</span>
                         </div>
                     </div>
                     <div className="card-content sticky-board-content">
@@ -229,17 +243,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onAddEventCl
                                         <button
                                             className={`sticky-action-btn pin-btn ${s.pinned ? 'active' : ''}`}
                                             onClick={() => pinSticky(s.id, !s.pinned)}
-                                            title={s.pinned ? 'ピン解除' : 'ボードにピン止め（ダッシュボードに残す）'}
+                                            title={s.pinned ? 'ピン解除' : 'ボードにピン止め（ダッシュボード最優先固定）'}
                                         >
                                             <Pin size={11} />
-                                        </button>
-                                        {/* 長期保存ボタン */}
-                                        <button
-                                            className="sticky-action-btn archive-btn"
-                                            onClick={() => archiveSticky(s.id)}
-                                            title="長期保存（付箋ボードページへ移動）"
-                                        >
-                                            <Archive size={11} />
                                         </button>
                                         {/* 削除ボタン */}
                                         <button
@@ -265,6 +271,35 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onAddEventCl
                                     )}
                                 </div>
                             ))}
+                        </div>
+
+                        {/* 下部案内リンクバー */}
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginTop: '16px',
+                            paddingTop: '10px',
+                            borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                            fontSize: '0.8rem',
+                            color: '#94a3b8',
+                            flexWrap: 'wrap',
+                            gap: '8px'
+                        }}>
+                            <div>
+                                {overflowCount > 0 ? (
+                                    <span>⚠️ 上限10枚を超えたため <strong>{overflowCount}枚</strong> が付箋ボードに保管中</span>
+                                ) : (
+                                    <span>💡 ピン留め優先で最大10枚までデスクに常駐します</span>
+                                )}
+                            </div>
+                            <button
+                                className="btn btn-sm btn-secondary"
+                                onClick={() => onViewChange('memos')}
+                                style={{ fontSize: '0.78rem', padding: '4px 10px', borderRadius: '8px' }}
+                            >
+                                付箋ボードで全付箋（{(data.stickies || []).length}件）を整理 ↗
+                            </button>
                         </div>
                     </div>
                 </div>
