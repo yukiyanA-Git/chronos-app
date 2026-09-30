@@ -77,15 +77,17 @@ export const Memos: React.FC<MemosProps> = ({ onExportClick }) => {
     };
 
     const handleCreateFolder = () => {
-        if (!newFolderName.trim()) return;
-        addStickyFolder(newFolderName.trim(), newFolderColor);
+        const trimmed = newFolderName.trim().slice(0, 10);
+        if (!trimmed) return;
+        addStickyFolder(trimmed, newFolderColor);
         setNewFolderName('');
         setNewFolderColor(FOLDER_COLORS[0]);
         setShowCreateFolder(false);
     };
 
     const handleRenameFolder = (id: string) => {
-        if (editFolderName.trim()) renameStickyFolder(id, editFolderName.trim());
+        const trimmed = editFolderName.trim().slice(0, 10);
+        if (trimmed) renameStickyFolder(id, trimmed);
         setEditingFolderId(null);
     };
 
@@ -125,7 +127,15 @@ export const Memos: React.FC<MemosProps> = ({ onExportClick }) => {
 
     // 付箋カード（再利用）
     const StickyCard = ({ s }: { s: typeof archivedStickies[0] }) => (
-        <div key={s.id} className="sticky-board-card-item" style={{ borderColor: s.color, borderLeftWidth: 5 }}>
+        <div
+            key={s.id}
+            className="sticky-board-card-item"
+            style={{
+                borderColor: s.color,
+                borderLeftWidth: 5,
+                zIndex: movingSticky === s.id ? 40 : 1
+            }}
+        >
             <div className="sticky-board-item-header" style={{ backgroundColor: s.color + '44' }}>
                 <div className="sticky-color-dot" style={{ background: s.color }} />
                 {s.attachedDate && (
@@ -146,22 +156,36 @@ export const Memos: React.FC<MemosProps> = ({ onExportClick }) => {
                         </button>
                         {movingSticky === s.id && (
                             <div className="sticky-move-dropdown" onClick={e => e.stopPropagation()}>
-                                <button
-                                    className="sticky-move-option"
-                                    onClick={e => { e.stopPropagation(); moveStickyToFolder(s.id, null); setMovingSticky(null); }}
-                                >
-                                    <StickyNote size={12} /> フォルダーなし
-                                </button>
-                                {folders.map(f => (
+                                <div className="sticky-move-header">
+                                    <span>📁 移動先フォルダー</span>
+                                </div>
+                                <div className="sticky-move-list">
                                     <button
-                                        key={f.id}
-                                        className="sticky-move-option"
-                                        onClick={() => { moveStickyToFolder(s.id, f.id); setMovingSticky(null); }}
+                                        className={`sticky-move-option ${!s.folderId ? 'active' : ''}`}
+                                        onClick={e => { e.stopPropagation(); moveStickyToFolder(s.id, null); setMovingSticky(null); }}
                                     >
-                                        <span className="sticky-move-folder-dot" style={{ background: f.color }} />
-                                        {f.name}
+                                        <StickyNote size={13} />
+                                        <span className="sticky-move-name">フォルダーなし (未分類)</span>
+                                        {!s.folderId && <Check size={13} className="sticky-move-check" />}
                                     </button>
-                                ))}
+                                    {folders.map(f => (
+                                        <button
+                                            key={f.id}
+                                            className={`sticky-move-option ${s.folderId === f.id ? 'active' : ''}`}
+                                            onClick={() => { moveStickyToFolder(s.id, f.id); setMovingSticky(null); }}
+                                            title={f.name}
+                                        >
+                                            <span className="sticky-move-folder-dot" style={{ background: f.color }} />
+                                            <span className="sticky-move-name">{f.name}</span>
+                                            {s.folderId === f.id && <Check size={13} className="sticky-move-check" />}
+                                        </button>
+                                    ))}
+                                    {folders.length === 0 && (
+                                        <div className="sticky-move-empty">
+                                            フォルダーがありません
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         )}
                     </div>
@@ -313,7 +337,8 @@ export const Memos: React.FC<MemosProps> = ({ onExportClick }) => {
                     <h4>新規フォルダーを作成</h4>
                     <input
                         className="folder-name-input"
-                        placeholder="フォルダー名"
+                        placeholder="フォルダー名 (最大10文字)"
+                        maxLength={10}
                         value={newFolderName}
                         onChange={e => setNewFolderName(e.target.value)}
                         onKeyDown={e => { if (e.key === 'Enter') handleCreateFolder(); }}
@@ -450,6 +475,7 @@ export const Memos: React.FC<MemosProps> = ({ onExportClick }) => {
                                                 <input
                                                     className="folder-rename-input"
                                                     value={editFolderName}
+                                                    maxLength={10}
                                                     onChange={e => setEditFolderName(e.target.value)}
                                                     onClick={e => e.stopPropagation()}
                                                     onKeyDown={e => {
