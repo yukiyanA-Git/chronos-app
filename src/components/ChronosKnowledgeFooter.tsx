@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { BookOpen, ChevronDown, ChevronUp, Sparkles, Shield, Clock, Calendar, CheckSquare } from 'lucide-react';
 
 export const ChronosKnowledgeFooter: React.FC = () => {
-    const [isExpanded, setIsExpanded] = useState(true);
+    const [isExpanded, setIsExpanded] = useState(false);
 
     return (
         <footer className="chronos-knowledge-footer glass" style={{

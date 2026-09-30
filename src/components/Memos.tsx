@@ -44,8 +44,8 @@ export const Memos: React.FC<MemosProps> = ({ onExportClick }) => {
     const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
     const [editFolderName, setEditFolderName] = useState('');
 
-    // 展開中フォルダー (初期状態でスマートフォルダーを展開)
-    const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['smart-dashboard', 'smart-calendar']));
+    // 展開中フォルダー (基本は折りたたまれた状態でスッキリ表示)
+    const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
 
     // 付箋移動ドロップダウン
     const [movingSticky, setMovingSticky] = useState<string | null>(null);
