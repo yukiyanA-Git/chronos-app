@@ -33,6 +33,7 @@ export const Memos: React.FC<MemosProps> = ({ onExportClick }) => {
 
     // 新規付箋作成（下書きがある場合は自動的にフォームを開いた状態にする）
     const [showCreateSticky, setShowCreateSticky] = useState(() => !!draftStickyText.trim());
+    const [notice, setNotice] = useState<string | null>(null);
 
     // フォルダー作成
     const [showCreateFolder, setShowCreateFolder] = useState(false);
@@ -113,6 +114,15 @@ export const Memos: React.FC<MemosProps> = ({ onExportClick }) => {
     // 3. 未分類・保管ストック（どのフォルダーにも属さず、カレンダーにも貼られず、ダッシュボード上限からも押し出された付箋）
     const uncategorized = archivedStickies.filter(s => !s.folderId && !s.attachedDate && !dashboardStickyIds.has(s.id));
 
+    const handleTogglePin = (s: typeof archivedStickies[0]) => {
+        if (!s.pinned && pinnedStickies.length >= 10) {
+            setNotice('ダッシュボードのピン留めは最大10件までです。他のピン留めを解除してからお試しください。');
+            setTimeout(() => setNotice(null), 5000);
+            return;
+        }
+        pinSticky(s.id, !s.pinned);
+    };
+
     // 付箋カード（再利用）
     const StickyCard = ({ s }: { s: typeof archivedStickies[0] }) => (
         <div key={s.id} className="sticky-board-card-item" style={{ borderColor: s.color, borderLeftWidth: 5 }}>
@@ -168,7 +178,7 @@ export const Memos: React.FC<MemosProps> = ({ onExportClick }) => {
                         className="sticky-board-action-btn"
                         style={s.pinned ? { color: '#f59e0b', background: 'rgba(245, 158, 11, 0.2)' } : {}}
                         title={s.pinned ? 'ピン留め解除（ダッシュボード固定を外す）' : 'ピン留め（ダッシュボードに優先固定）'}
-                        onClick={() => pinSticky(s.id, !s.pinned)}
+                        onClick={() => handleTogglePin(s)}
                     >
                         <Pin size={14} />
                     </button>
@@ -256,6 +266,16 @@ export const Memos: React.FC<MemosProps> = ({ onExportClick }) => {
                     </button>
                 </div>
             </header>
+
+            {/* 案内トースト */}
+            {notice && (
+                <div className="sticky-overflow-toast" style={{ marginBottom: '16px' }}>
+                    <span>📌 {notice}</span>
+                    <button className="toast-close-btn" onClick={() => setNotice(null)}>
+                        <X size={14} />
+                    </button>
+                </div>
+            )}
 
             {/* 新規付箋作成パネル */}
             {showCreateSticky && (

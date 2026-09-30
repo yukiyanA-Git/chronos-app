@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { Calendar, BookOpen, Plus, Smile, StickyNote, X, Pin } from 'lucide-react';
 import { ChronosWidgetPanel } from './ChronosWidgetPanel';
@@ -26,6 +26,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onAddEventCl
         draftStickyText, draftStickyColor, setDraftStickyText, setDraftStickyColor, clearDraftSticky
     } = useApp();
     const debounceTimers = useRef<{ [id: string]: ReturnType<typeof setTimeout> }>({});
+    const [notice, setNotice] = useState<string | null>(null);
 
     const today = new Date();
     const formattedDate = new Intl.DateTimeFormat('ja-JP', { dateStyle: 'full' }).format(today);
@@ -56,8 +57,24 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onAddEventCl
     const handleAddSticky = () => {
         const text = draftStickyText.trim();
         if (!text) return;
+
+        // ピン留めが10件以上ある場合、新規付箋は即座に付箋ボードの保管ストックに押し出される旨を案内
+        if (pinnedStickies.length >= 10) {
+            setNotice('ダッシュボードがピン留め（10件）で満杯のため、付箋ボードの保管ストックに保存しました。');
+            setTimeout(() => setNotice(null), 6000);
+        }
+
         addSticky(text, draftStickyColor);
         clearDraftSticky();
+    };
+
+    const handleTogglePin = (id: string, currentPinned: boolean) => {
+        if (!currentPinned && pinnedStickies.length >= 10) {
+            setNotice('ピン留めは最大10件までです。他のピン留めを解除してからお試しください。');
+            setTimeout(() => setNotice(null), 6000);
+            return;
+        }
+        pinSticky(id, !currentPinned);
     };
 
     const handleStickyChange = (id: string, value: string) => {
@@ -189,6 +206,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onAddEventCl
                         </div>
                     </div>
                     <div className="card-content sticky-board-content">
+                        {/* 案内トースト */}
+                        {notice && (
+                            <div className="sticky-overflow-toast">
+                                <span>📌 {notice}</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <button className="toast-link-btn" onClick={() => onViewChange('memos')}>
+                                        付箋ボードを見る ↗
+                                    </button>
+                                    <button className="toast-close-btn" onClick={() => setNotice(null)}>
+                                        <X size={14} />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
                         {/* 新規入力エリア (下書き連携・ページ切替でも保持) */}
                         <div className="sticky-input-area">
                             <div className="sticky-color-picker">
@@ -242,7 +274,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onAddEventCl
                                         {/* ピン止め/解除ボタン */}
                                         <button
                                             className={`sticky-action-btn pin-btn ${s.pinned ? 'active' : ''}`}
-                                            onClick={() => pinSticky(s.id, !s.pinned)}
+                                            onClick={() => handleTogglePin(s.id, s.pinned)}
                                             title={s.pinned ? 'ピン解除' : 'ボードにピン止め（ダッシュボード最優先固定）'}
                                         >
                                             <Pin size={11} />
