@@ -22,6 +22,7 @@ interface MemosProps {
 export const Memos: React.FC<MemosProps> = ({ onExportClick }) => {
     const {
         data, addSticky, deleteSticky, attachStickyToDate, updateSticky, pinSticky,
+        archiveSticky, unarchiveSticky,
         addStickyFolder, renameStickyFolder, deleteStickyFolder, moveStickyToFolder,
         draftStickyText, draftStickyColor, setDraftStickyText, setDraftStickyColor, clearDraftSticky
     } = useApp();
@@ -107,88 +108,123 @@ export const Memos: React.FC<MemosProps> = ({ onExportClick }) => {
     const calendarStickies = archivedStickies.filter(s => !!s.attachedDate);
 
     // 2. クイックデスク・スマートフォルダー（ダッシュボードに現在選抜・表示されている最大10枚）
-    const candidateStickies = archivedStickies.filter(s => !s.attachedDate && !s.folderId);
+    const candidateStickies = archivedStickies.filter(s => !s.attachedDate && !s.folderId && !s.archived);
     const pinnedStickies = candidateStickies.filter(s => s.pinned);
     const unpinnedStickies = candidateStickies.filter(s => !s.pinned);
     const dashboardStickies = [...pinnedStickies, ...unpinnedStickies.slice(0, Math.max(0, 10 - pinnedStickies.length))];
     const dashboardStickyIds = new Set(dashboardStickies.map(s => s.id));
 
-    // 3. 未分類・保管ストック（どのフォルダーにも属さず、カレンダーにも貼られず、ダッシュボード上限からも押し出された付箋）
+    // 3. 未分類・保管ストック（どのフォルダーにも属さず、カレンダーにも貼られず、ダッシュボード上限からも押し出された、または長期保存された付箋）
     const uncategorized = archivedStickies.filter(s => !s.folderId && !s.attachedDate && !dashboardStickyIds.has(s.id));
 
     const handleTogglePin = (s: typeof archivedStickies[0]) => {
-        if (!s.pinned && pinnedStickies.length >= 10) {
-            setNotice('ダッシュボードのピン留めは最大10件までです。他のピン留めを解除してからお試しください。');
-            setTimeout(() => setNotice(null), 5000);
-            return;
+        if (!s.pinned) {
+            if (pinnedStickies.length >= 10) {
+                setNotice('ダッシュボードのピン留めは最大10件までです。他のピン留めを解除してからお試しください。');
+                setTimeout(() => setNotice(null), 5000);
+                return;
+            }
+            if (s.archived) unarchiveSticky(s.id);
+            pinSticky(s.id, true);
+        } else {
+            pinSticky(s.id, false);
         }
-        pinSticky(s.id, !s.pinned);
     };
 
     // 付箋カード（再利用）
-    const StickyCard = ({ s }: { s: typeof archivedStickies[0] }) => (
-        <div
-            key={s.id}
-            className="sticky-board-card-item"
-            style={{
-                borderColor: s.color,
-                borderLeftWidth: 5,
-                zIndex: movingSticky === s.id ? 40 : 1
-            }}
-        >
-            <div className="sticky-board-item-header" style={{ backgroundColor: s.color + '44' }}>
-                <div className="sticky-color-dot" style={{ background: s.color }} />
-                {s.attachedDate && (
-                    <span className="sticky-board-date-tag">📅 {s.attachedDate}</span>
-                )}
-                {s.pinned && (
-                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#f59e0b', marginLeft: '4px' }}>📌 ピン留め中</span>
-                )}
-                <div className="sticky-board-actions">
-                    {/* フォルダーに移動 */}
-                    <div className="sticky-move-wrapper" onClick={e => e.stopPropagation()}>
-                        <button
-                            className="sticky-board-action-btn"
-                            title="フォルダーに移動"
-                            onClick={e => { e.stopPropagation(); setMovingSticky(movingSticky === s.id ? null : s.id); }}
-                        >
-                            <FolderInput size={14} />
-                        </button>
-                        {movingSticky === s.id && (
-                            <div className="sticky-move-dropdown" onClick={e => e.stopPropagation()}>
-                                <div className="sticky-move-header">
-                                    <span>📁 移動先フォルダー</span>
-                                </div>
-                                <div className="sticky-move-list">
-                                    <button
-                                        className={`sticky-move-option ${!s.folderId ? 'active' : ''}`}
-                                        onClick={e => { e.stopPropagation(); moveStickyToFolder(s.id, null); setMovingSticky(null); }}
-                                    >
-                                        <StickyNote size={13} />
-                                        <span className="sticky-move-name">フォルダーなし (未分類)</span>
-                                        {!s.folderId && <Check size={13} className="sticky-move-check" />}
-                                    </button>
-                                    {folders.map(f => (
+    const StickyCard = ({ s }: { s: typeof archivedStickies[0] }) => {
+        const isDashboard = !s.folderId && !s.archived && dashboardStickyIds.has(s.id);
+        const isStock = !s.folderId && (s.archived || !dashboardStickyIds.has(s.id));
+
+        return (
+            <div
+                key={s.id}
+                className="sticky-board-card-item"
+                style={{
+                    borderColor: s.color,
+                    borderLeftWidth: 5,
+                    zIndex: movingSticky === s.id ? 40 : 1
+                }}
+            >
+                <div className="sticky-board-item-header" style={{ backgroundColor: s.color + '44' }}>
+                    <div className="sticky-color-dot" style={{ background: s.color }} />
+                    {s.attachedDate && (
+                        <span className="sticky-board-date-tag">📅 {s.attachedDate}</span>
+                    )}
+                    {s.pinned && (
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#f59e0b', marginLeft: '4px' }}>📌 ピン留め中</span>
+                    )}
+                    <div className="sticky-board-actions">
+                        {/* フォルダーに移動 */}
+                        <div className="sticky-move-wrapper" onClick={e => e.stopPropagation()}>
+                            <button
+                                className="sticky-board-action-btn"
+                                title="フォルダーに移動"
+                                onClick={e => { e.stopPropagation(); setMovingSticky(movingSticky === s.id ? null : s.id); }}
+                            >
+                                <FolderInput size={14} />
+                            </button>
+                            {movingSticky === s.id && (
+                                <div className="sticky-move-dropdown" onClick={e => e.stopPropagation()}>
+                                    <div className="sticky-move-header">
+                                        <span>📁 移動先の選択</span>
+                                    </div>
+                                    <div className="sticky-move-list">
+                                        {/* 1. クイックデスク（ダッシュボード） */}
                                         <button
-                                            key={f.id}
-                                            className={`sticky-move-option ${s.folderId === f.id ? 'active' : ''}`}
-                                            onClick={() => { moveStickyToFolder(s.id, f.id); setMovingSticky(null); }}
-                                            title={f.name}
+                                            className={`sticky-move-option ${isDashboard ? 'active' : ''}`}
+                                            onClick={e => {
+                                                e.stopPropagation();
+                                                moveStickyToFolder(s.id, null);
+                                                unarchiveSticky(s.id);
+                                                setMovingSticky(null);
+                                            }}
                                         >
-                                            <span className="sticky-move-folder-dot" style={{ background: f.color }} />
-                                            <span className="sticky-move-name">{f.name}</span>
-                                            {s.folderId === f.id && <Check size={13} className="sticky-move-check" />}
+                                            <span style={{ fontSize: '13px', lineHeight: 1 }}>📌</span>
+                                            <span className="sticky-move-name">クイックデスク (ダッシュボード)</span>
+                                            {isDashboard && <Check size={13} className="sticky-move-check" />}
                                         </button>
-                                    ))}
-                                    {folders.length === 0 && (
-                                        <div className="sticky-move-empty">
-                                            フォルダーがありません
-                                        </div>
-                                    )}
+
+                                        {/* 2. 付箋ボード（保管ストック・バラ） */}
+                                        <button
+                                            className={`sticky-move-option ${isStock ? 'active' : ''}`}
+                                            onClick={e => {
+                                                e.stopPropagation();
+                                                moveStickyToFolder(s.id, null);
+                                                archiveSticky(s.id);
+                                                if (s.pinned) pinSticky(s.id, false);
+                                                setMovingSticky(null);
+                                            }}
+                                        >
+                                            <StickyNote size={13} />
+                                            <span className="sticky-move-name">付箋ボードへ (保管ストック)</span>
+                                            {isStock && <Check size={13} className="sticky-move-check" />}
+                                        </button>
+
+                                        {/* 区切り線 */}
+                                        {folders.length > 0 && <div className="sticky-move-divider" />}
+
+                                        {/* 3. 各フォルダー */}
+                                        {folders.map(f => (
+                                            <button
+                                                key={f.id}
+                                                className={`sticky-move-option ${s.folderId === f.id ? 'active' : ''}`}
+                                                onClick={e => {
+                                                    e.stopPropagation();
+                                                    moveStickyToFolder(s.id, f.id);
+                                                    setMovingSticky(null);
+                                                }}
+                                                title={f.name}
+                                            >
+                                                <span className="sticky-move-folder-dot" style={{ background: f.color }} />
+                                                <span className="sticky-move-name">{f.name}</span>
+                                                {s.folderId === f.id && <Check size={13} className="sticky-move-check" />}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
-                        )}
-                    </div>
+                            )}
+                        </div>
                     {/* カレンダー連携 */}
                     <button
                         className="sticky-board-action-btn"
@@ -261,6 +297,7 @@ export const Memos: React.FC<MemosProps> = ({ onExportClick }) => {
             )}
         </div>
     );
+};
 
     return (
         <section id="view-memos" className="view-section active" onClick={() => setMovingSticky(null)}>
