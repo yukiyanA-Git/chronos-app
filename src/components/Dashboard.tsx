@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Calendar, BookOpen, Plus, Smile, StickyNote, X, Pin } from 'lucide-react';
+import { Calendar, BookOpen, Plus, Smile, StickyNote, X, Pin, Archive } from 'lucide-react';
 import { ChronosWidgetPanel } from './ChronosWidgetPanel';
 import { YukiyanArtPromoBanner } from './YukiyanArtPromoBanner';
 
@@ -22,7 +22,7 @@ const STICKY_COLORS = [
 
 export const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onAddEventClick }) => {
     const {
-        data, addSticky, updateSticky, deleteSticky, pinSticky,
+        data, addSticky, updateSticky, deleteSticky, pinSticky, archiveSticky,
         draftStickyText, draftStickyColor, setDraftStickyText, setDraftStickyColor, clearDraftSticky
     } = useApp();
     const debounceTimers = useRef<{ [id: string]: ReturnType<typeof setTimeout> }>({});
@@ -88,7 +88,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onAddEventCl
     // 1. ピン留めされている付箋（s.pinned === true）
     // 2. カレンダー未貼付かつフォルダー未設定の通常付箋（!s.attachedDate && !s.folderId）
     // ※ ピン留め付箋を最優先。空いた枠に未ピン付箋の最新順を配置（最大10枚の上限・押し出しルール）
-    const allCandidateStickies = (data.stickies || []).filter(s => !s.attachedDate && !s.folderId);
+    const allCandidateStickies = (data.stickies || []).filter(s => !s.attachedDate && !s.folderId && !s.archived);
     const pinnedStickies = allCandidateStickies.filter(s => s.pinned);
     const unpinnedStickies = allCandidateStickies.filter(s => !s.pinned);
 
@@ -278,6 +278,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onAddEventCl
                                             title={s.pinned ? 'ピン解除' : 'ボードにピン止め（ダッシュボード最優先固定）'}
                                         >
                                             <Pin size={11} />
+                                        </button>
+                                        {/* 付箋ボードへ移動（長期保存）ボタン */}
+                                        <button
+                                            className="sticky-action-btn archive-btn"
+                                            onClick={() => archiveSticky(s.id)}
+                                            title="付箋ボードへ移動（ダッシュボードから外す）"
+                                        >
+                                            <Archive size={11} />
                                         </button>
                                         {/* 削除ボタン */}
                                         <button
