@@ -32,7 +32,7 @@ export const Settings: React.FC<SettingsProps> = ({ onExportClick }) => {
     const handleDirectUpload = async () => {
         try {
             await forceUploadToCloud();
-            alert(`📤 クラウドへ保存完了！ (予定 ${(data.events || []).length} 件 / 付箋 ${(data.stickies || []).length} 件)`);
+            alert(`📤 クラウドへ保存完了！ (予定 ${(data.events || []).length} 件 / 付箋 ${(data.stickies || []).length} 件 / ノート ${(data.notebookNotes || []).length} 件)`);
         } catch (e: any) {
             alert(`送信エラー: ${e?.message || '失敗しました'}`);
         }
@@ -173,7 +173,7 @@ export const Settings: React.FC<SettingsProps> = ({ onExportClick }) => {
                             <div style={{ fontSize: '0.75rem', background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '8px', fontFamily: 'monospace', lineHeight: 1.7 }}>
                                 🆔 同期アカウントID (UID): <strong>{currentUser.uid}</strong><br />
                                 ☁️ クラウド通信状態: {cloudSyncInfo.status === 'success' ? <span style={{ color: '#10b981', fontWeight: 'bold' }}>🟢 接続・同期完了 ({cloudSyncInfo.lastSyncedAt || '最新'})</span> : cloudSyncInfo.status === 'syncing' ? <span style={{ color: '#f59e0b' }}>🟡 通信中...</span> : cloudSyncInfo.status === 'error' ? <span style={{ color: '#ef4444', fontWeight: 'bold' }}>🔴 通信エラー: {cloudSyncInfo.errorMessage}</span> : <span>⚪ 未接続</span>}<br />
-                                📊 アカウント同期中の実データ数: 予定 <strong>{(data.events || []).length}</strong> 件 / 付箋 <strong>{(data.stickies || []).length}</strong> 件
+                                📊 アカウント同期中の実データ数: 予定 <strong>{(data.events || []).length}</strong> 件 / 付箋 <strong>{(data.stickies || []).length}</strong> 件 / ノート <strong>{(data.notebookNotes || []).length}</strong> 冊・頁
                             </div>
 
                             <div style={{ display: 'flex', gap: '8px', marginTop: '6px', flexDirection: 'column' }}>

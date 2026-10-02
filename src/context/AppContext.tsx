@@ -65,6 +65,7 @@ interface AppContextProps {
         errorMessage: string | null;
         cloudEventCount: number | null;
         cloudStickyCount: number | null;
+        cloudNotebookCount: number | null;
     };
     forceUploadToCloud: () => Promise<void>;
     forceFetchFromCloud: () => Promise<void>;
@@ -198,12 +199,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         errorMessage: string | null;
         cloudEventCount: number | null;
         cloudStickyCount: number | null;
+        cloudNotebookCount: number | null;
     }>({
         status: 'idle',
         lastSyncedAt: null,
         errorMessage: null,
         cloudEventCount: null,
-        cloudStickyCount: null
+        cloudStickyCount: null,
+        cloudNotebookCount: null
     });
 
     // 1. テーマ・背景色初期化
@@ -246,7 +249,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                             lastSyncedAt: `${new Date().toLocaleTimeString()} ${isCache ? '(端末保存)' : '(☁️クラウド直結)'}`,
                             errorMessage: null,
                             cloudEventCount: (cloudData.events || []).length,
-                            cloudStickyCount: (cloudData.stickies || []).length
+                            cloudStickyCount: (cloudData.stickies || []).length,
+                            cloudNotebookCount: (cloudData.notebookNotes || []).length
                         });
                     } else {
                         setCloudSyncInfo({
@@ -254,7 +258,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                             lastSyncedAt: new Date().toLocaleTimeString(),
                             errorMessage: null,
                             cloudEventCount: 0,
-                            cloudStickyCount: 0
+                            cloudStickyCount: 0,
+                            cloudNotebookCount: 0
                         });
                     }
                 }, (err: any) => {
@@ -270,7 +275,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 // 未ログイン時は完全に空データをセット（勝手なサンプル生成・汚染の完全遮断）
                 setData(EMPTY_DATA);
                 localStorage.removeItem(LOCAL_STORAGE_KEY);
-                setCloudSyncInfo({ status: 'idle', lastSyncedAt: null, errorMessage: null, cloudEventCount: null, cloudStickyCount: null });
+                setCloudSyncInfo({ status: 'idle', lastSyncedAt: null, errorMessage: null, cloudEventCount: null, cloudStickyCount: null, cloudNotebookCount: null });
                 if (unsubscribeFirestore) unsubscribeFirestore();
             }
         });
@@ -319,7 +324,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     lastSyncedAt: new Date().toLocaleTimeString(),
                     errorMessage: null,
                     cloudEventCount: (sanitized.events || []).length,
-                    cloudStickyCount: (sanitized.stickies || []).length
+                    cloudStickyCount: (sanitized.stickies || []).length,
+                    cloudNotebookCount: (sanitized.notebookNotes || []).length
                 });
             }).catch((err: any) => {
                 console.error('Firestore save error:', err);
@@ -816,6 +822,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                                 }
                             }))
                         }
+                    },
+                    notebookNotes: {
+                        arrayValue: {
+                            values: (clean.notebookNotes || []).map(n => ({
+                                mapValue: {
+                                    fields: {
+                                        id: { stringValue: n.id },
+                                        title: { stringValue: n.title || '' },
+                                        content: { stringValue: n.content || '' },
+                                        type: { stringValue: n.type || 'daily' },
+                                        date: { stringValue: n.date || '' },
+                                        color: { stringValue: n.color || '#ffffff' },
+                                        createdAt: { stringValue: n.createdAt || '' },
+                                        updatedAt: { stringValue: n.updatedAt || '' },
+                                        isLocked: { booleanValue: !!n.isLocked },
+                                        order: { integerValue: n.order || 0 },
+                                        bookTitle: { stringValue: n.bookTitle || '' },
+                                        pageNumber: { integerValue: n.pageNumber || 1 },
+                                        images: {
+                                            arrayValue: {
+                                                values: (n.images || []).map(img => ({ stringValue: img }))
+                                            }
+                                        }
+                                    }
+                                }
+                            }))
+                        }
                     }
                 }
             };
@@ -840,7 +873,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             lastSyncedAt: new Date().toLocaleTimeString(),
             errorMessage: null,
             cloudEventCount: (data.events || []).length,
-            cloudStickyCount: (data.stickies || []).length
+            cloudStickyCount: (data.stickies || []).length,
+            cloudNotebookCount: (data.notebookNotes || []).length
         });
     };
 
