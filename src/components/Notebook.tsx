@@ -31,8 +31,11 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
 
     const notes = data.notebookNotes || [];
 
-    // モード切替: 'daily' (日付順ログ) / 'free' (自由帳)
-    const [currentType, setCurrentType] = useState<NotebookType>('daily');
+    // モード切替: 'daily' (日付順ログ) / 'free' (自由帳) - 直前に開いていた状態を記憶
+    const [currentType, setCurrentType] = useState<NotebookType>(() => {
+        const saved = localStorage.getItem('chronos_last_notebook_type');
+        return (saved === 'free' || saved === 'daily') ? saved : 'daily';
+    });
 
     // 自由帳のノート冊子(本)リスト
     const freeBooks = useMemo(() => {
@@ -44,8 +47,10 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
         return Array.from(set);
     }, [notes]);
 
-    // 選択中のノート冊子(本)名
-    const [selectedBook, setSelectedBook] = useState<string>('自由帳 (メイン)');
+    // 選択中のノート冊子(本)名 - 直前の選択を記憶
+    const [selectedBook, setSelectedBook] = useState<string>(() => {
+        return localStorage.getItem('chronos_last_notebook_book') || '自由帳 (メイン)';
+    });
 
     // 新規ノート(冊)作成ダイアログ
     const [showNewBookModal, setShowNewBookModal] = useState(false);
@@ -58,8 +63,25 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
     // 検索キーワード
     const [searchQuery, setSearchQuery] = useState('');
 
-    // 現在選択中のノートID
-    const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
+    // 現在選択中のノートID - 直前の開いていたページを記憶
+    const [activeNoteId, setActiveNoteId] = useState<string | null>(() => {
+        return localStorage.getItem('chronos_last_notebook_note_id') || null;
+    });
+
+    // 状態変更時にローカル記憶へ同期保存 (カレンダー等に移動しても戻った時に直前の状態を完全復元)
+    useEffect(() => {
+        localStorage.setItem('chronos_last_notebook_type', currentType);
+    }, [currentType]);
+
+    useEffect(() => {
+        localStorage.setItem('chronos_last_notebook_book', selectedBook);
+    }, [selectedBook]);
+
+    useEffect(() => {
+        if (activeNoteId) {
+            localStorage.setItem('chronos_last_notebook_note_id', activeNoteId);
+        }
+    }, [activeNoteId]);
 
     // カレンダー貼付用ダイアログ (自由帳用)
     const [showDateModal, setShowDateModal] = useState(false);
@@ -131,11 +153,13 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
         }
     }, [targetNotebookDate]);
 
-    // アクティブノートの選択（リスト変更時に範囲外なら先頭を選択）
+    // アクティブノートの選択（リスト変更時に範囲外なら保存済みIDまたは先頭を選択）
     useEffect(() => {
         if (filteredNotes.length > 0) {
             if (!activeNoteId || !filteredNotes.some(n => n.id === activeNoteId)) {
-                setActiveNoteId(filteredNotes[0].id);
+                const savedId = localStorage.getItem('chronos_last_notebook_note_id');
+                const matched = filteredNotes.find(n => n.id === savedId);
+                setActiveNoteId(matched ? matched.id : filteredNotes[0].id);
             }
         } else {
             setActiveNoteId(null);
