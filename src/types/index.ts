@@ -81,4 +81,5 @@ export interface AppData {
     stickies: StickyNote[];
     stickyFolders: StickyFolder[];
     notebookNotes?: NotebookNote[];
+    isPremium?: boolean;
 }

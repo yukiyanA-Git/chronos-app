@@ -26,10 +26,11 @@ export const NOTEBOOK_PAPERS = [
 export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
     const {
         data, addNotebookNote, updateNotebookNote, deleteNotebookNote,
-        targetNotebookDate, setTargetNotebookDate
+        targetNotebookDate, setTargetNotebookDate, isPremium
     } = useApp();
 
     const notes = data.notebookNotes || [];
+    const MAX_FREE_BOOKS = 10; // 無料プラン時の自由帳上限 (プレミアムプラン時は無制限)
 
     // モード切替: 'daily' (日付順ログ) / 'free' (自由帳) - 直前に開いていた状態を記憶
     const [currentType, setCurrentType] = useState<NotebookType>(() => {
@@ -66,6 +67,9 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
         return result;
     }, [notes, freeBooksOrder]);
 
+    // 自由帳の冊数上限到達判定 (無料プラン時10冊、プレミアム時は無制限)
+    const isBookLimitReached = !isPremium && freeBooks.length >= MAX_FREE_BOOKS;
+
     // 選択中のノート冊子(本)名 - 直前の選択を記憶
     const [selectedBook, setSelectedBook] = useState<string>(() => {
         return localStorage.getItem('chronos_last_notebook_book') || '自由帳 (メイン)';
@@ -74,6 +78,9 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
     // 新規ノート(冊)作成ダイアログ
     const [showNewBookModal, setShowNewBookModal] = useState(false);
     const [newBookTitleInput, setNewBookTitleInput] = useState('');
+
+    // 自由帳の上限案内・プレミアム案内モーダル
+    const [showBookLimitModal, setShowBookLimitModal] = useState(false);
 
     // 過去・指定日付での新規ページ作成ダイアログ
     const [showCustomDateModal, setShowCustomDateModal] = useState(false);
@@ -190,6 +197,11 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
 
     // 新規ノート冊子(本)の作成
     const handleConfirmCreateNewBook = () => {
+        if (isBookLimitReached) {
+            setShowNewBookModal(false);
+            setShowBookLimitModal(true);
+            return;
+        }
         const title = newBookTitleInput.trim() || `新しいノート ${freeBooks.length + 1}`;
         setSelectedBook(title);
         setShowNewBookModal(false);
@@ -514,6 +526,17 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                     <div className="bookshelf-header">
                         <span className="bookshelf-label">
                             <Bookmark size={15} /> <strong>ノート冊子 (本) を選択:</strong>
+                            <span style={{
+                                fontSize: '0.75rem',
+                                marginLeft: '8px',
+                                padding: '2px 8px',
+                                borderRadius: '12px',
+                                background: isPremium ? 'rgba(16, 185, 129, 0.15)' : isBookLimitReached ? 'rgba(239, 68, 68, 0.15)' : 'rgba(255, 255, 255, 0.08)',
+                                color: isPremium ? '#10b981' : isBookLimitReached ? '#ef4444' : 'inherit',
+                                fontWeight: 600
+                            }}>
+                                {isPremium ? '👑 冊数無制限 (プレミアム)' : `${freeBooks.length}/${MAX_FREE_BOOKS}冊`}
+                            </span>
                         </span>
                         <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginLeft: 'auto', flexWrap: 'wrap' }}>
                             {freeBooks.length > 1 && (
@@ -542,9 +565,16 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                             )}
                             <button
                                 type="button"
-                                className="btn btn-sm btn-outline-primary add-book-btn"
-                                onClick={() => { setNewBookTitleInput(''); setShowNewBookModal(true); }}
-                                title="新しいノート(冊)を追加"
+                                className={`btn btn-sm ${isBookLimitReached ? 'btn-secondary' : 'btn-outline-primary'} add-book-btn`}
+                                onClick={() => {
+                                    if (isBookLimitReached) {
+                                        setShowBookLimitModal(true);
+                                    } else {
+                                        setNewBookTitleInput('');
+                                        setShowNewBookModal(true);
+                                    }
+                                }}
+                                title={isBookLimitReached ? "無料プラン上限（10冊）に達しています" : "新しいノート(冊)を追加"}
                             >
                                 <Plus size={14} /> ＋ 新しいノート(冊)を作成
                             </button>
@@ -1135,6 +1165,61 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                                 )}
                                 <button className="btn btn-secondary btn-sm" onClick={() => setShowDateModal(false)}>キャンセル</button>
                                 <button className="btn btn-primary btn-sm" onClick={handleAttachDateSubmit}>設定する</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 自由帳の10冊上限＆プレミアム案内モーダル */}
+            {showBookLimitModal && (
+                <div className="modal-backdrop" onClick={() => setShowBookLimitModal(false)}>
+                    <div className="modal-container glass" onClick={e => e.stopPropagation()} style={{ maxWidth: '440px' }}>
+                        <div className="modal-header">
+                            <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#f59e0b' }}>
+                                📕 自由帳の冊数上限 (10冊)
+                            </h3>
+                            <button className="btn-close" onClick={() => setShowBookLimitModal(false)}><X size={16} /></button>
+                        </div>
+                        <div className="modal-body" style={{ padding: '20px' }}>
+                            <div style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid #f59e0b', borderRadius: '10px', padding: '12px 14px', marginBottom: '16px' }}>
+                                <strong style={{ color: '#f59e0b', fontSize: '0.95rem', display: 'block', marginBottom: '6px' }}>
+                                    無料プランの自由帳上限（10冊）に達しています
+                                </strong>
+                                <p style={{ fontSize: '0.85rem', lineHeight: 1.6, margin: 0, opacity: 0.9 }}>
+                                    現在のプランでは、自由帳は<strong>最大10冊まで</strong>作成可能です。<br />
+                                    ※ 既存の冊子内の<strong>ページ数は無制限</strong>で何ページでも追加できます。<br />
+                                    ※ <strong>日付ログ（業務日誌）も無制限</strong>で毎日何ページでも記録できます。
+                                </p>
+                            </div>
+
+                            <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '10px', padding: '14px', marginBottom: '18px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                                    <span style={{ fontSize: '1.1rem' }}>👑</span>
+                                    <strong style={{ fontSize: '0.9rem', color: '#10b981' }}>プレミアムプランで無制限に</strong>
+                                </div>
+                                <p style={{ fontSize: '0.8rem', lineHeight: 1.5, opacity: 0.8, margin: 0 }}>
+                                    今後提供される「広告非表示＆無制限プラン」をご利用いただくと、ノート冊数を上限なく無制限に作成・整理できるようになります。
+                                </p>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                                {onViewChange && (
+                                    <button
+                                        type="button"
+                                        className="btn btn-secondary btn-sm"
+                                        style={{ marginRight: 'auto', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                        onClick={() => {
+                                            setShowBookLimitModal(false);
+                                            onViewChange('settings');
+                                        }}
+                                    >
+                                        👑 プラン設定を見る
+                                    </button>
+                                )}
+                                <button className="btn btn-primary btn-sm" onClick={() => setShowBookLimitModal(false)}>
+                                    了解しました
+                                </button>
                             </div>
                         </div>
                     </div>
