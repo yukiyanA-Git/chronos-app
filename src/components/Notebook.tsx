@@ -608,7 +608,7 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                                     className="sheet-content-textarea"
                                     value={activeNote.content}
                                     onChange={e => handleContentChange(e.target.value)}
-                                    placeholder="ここにA4ノートのメモを記入... (リンクや箇条書きも自由に入力できます)"
+                                    placeholder="文字を記入... (リンクや箇条書きも自由に入力できます)"
                                     rows={25}
                                     autoFocus
                                 />
