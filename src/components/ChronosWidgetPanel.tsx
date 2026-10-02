@@ -119,10 +119,11 @@ const NextEventCountdown: React.FC = () => {
 // ② 音声ボイスメモ (マイク録音 ➔ 付箋自動生成)
 // ────────────────────────────────────────────
 const VoiceMemoWidget: React.FC = () => {
-    const { addVoiceSticky } = useApp();
+    const { addVoiceSticky, addVoiceNotebookNote } = useApp();
     const [isListening, setIsListening] = useState(false);
     const [transcript, setTranscript] = useState('');
-    const [savedNotice, setSavedNotice] = useState(false);
+    const [savedNotice, setSavedNotice] = useState<string | null>(null);
+    const [voiceTarget, setVoiceTarget] = useState<'sticky' | 'notebook'>('sticky');
     const recognitionRef = useRef<any>(null);
 
     useEffect(() => {
@@ -170,25 +171,72 @@ const VoiceMemoWidget: React.FC = () => {
         }
     };
 
-    const handleSaveSticky = () => {
+    const handleSave = () => {
         if (!transcript.trim()) return;
-        addVoiceSticky(transcript.trim()); // 専用フォルダー「🎙️ 音声メモ」に保存
+        if (voiceTarget === 'notebook') {
+            addVoiceNotebookNote(transcript.trim());
+            setSavedNotice('📔 今日の日付ノートに追記・保存しました！');
+        } else {
+            addVoiceSticky(transcript.trim()); // 専用フォルダー「🎙️ 音声メモ」に保存
+            setSavedNotice('📌 「🎙️ ボイス入力付箋」フォルダーへ保存しました！');
+        }
         setTranscript('');
-        setSavedNotice(true);
-        setTimeout(() => setSavedNotice(false), 3000);
+        setTimeout(() => setSavedNotice(null), 3500);
     };
 
     return (
         <div className="voice-memo-card">
             <div className="voice-memo-header">
                 <span className="voice-memo-title">
-                    <Sparkles size={13} className="sparkle-icon" /> ボイス入力付箋
+                    <Sparkles size={13} className="sparkle-icon" /> ボイス入力
                 </span>
                 {savedNotice && (
                     <span className="voice-saved-badge">
-                        <Check size={12} /> 📌 「🎙️ ボイス入力付箋」フォルダーへ保存しました！
+                        <Check size={12} /> {savedNotice}
                     </span>
                 )}
+            </div>
+
+            {/* 送信先切り替えスイッチ (付箋 vs ノート) */}
+            <div className="voice-target-switcher" style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
+                <button
+                    type="button"
+                    onClick={() => setVoiceTarget('sticky')}
+                    className={`voice-target-btn ${voiceTarget === 'sticky' ? 'active' : ''}`}
+                    style={{
+                        flex: 1,
+                        padding: '4px 8px',
+                        fontSize: '11px',
+                        borderRadius: '6px',
+                        border: voiceTarget === 'sticky' ? '1px solid var(--accent, #6366f1)' : '1px solid var(--border-color, #e2e8f0)',
+                        background: voiceTarget === 'sticky' ? 'var(--accent-light, #e0e7ff)' : 'transparent',
+                        color: voiceTarget === 'sticky' ? 'var(--accent, #4f46e5)' : 'var(--text-muted, #64748b)',
+                        cursor: 'pointer',
+                        fontWeight: voiceTarget === 'sticky' ? 600 : 400,
+                        transition: 'all 0.15s ease'
+                    }}
+                >
+                    📌 付箋へ
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setVoiceTarget('notebook')}
+                    className={`voice-target-btn ${voiceTarget === 'notebook' ? 'active' : ''}`}
+                    style={{
+                        flex: 1,
+                        padding: '4px 8px',
+                        fontSize: '11px',
+                        borderRadius: '6px',
+                        border: voiceTarget === 'notebook' ? '1px solid var(--accent, #6366f1)' : '1px solid var(--border-color, #e2e8f0)',
+                        background: voiceTarget === 'notebook' ? 'var(--accent-light, #e0e7ff)' : 'transparent',
+                        color: voiceTarget === 'notebook' ? 'var(--accent, #4f46e5)' : 'var(--text-muted, #64748b)',
+                        cursor: 'pointer',
+                        fontWeight: voiceTarget === 'notebook' ? 600 : 400,
+                        transition: 'all 0.15s ease'
+                    }}
+                >
+                    📔 ノートへ
+                </button>
             </div>
 
             {/* 音声入力エリア */}
@@ -205,7 +253,7 @@ const VoiceMemoWidget: React.FC = () => {
                         <span className="voice-transcript-text">{transcript}</span>
                     ) : (
                         <span className="voice-placeholder">
-                            {isListening ? '🎤 話しかけてください...' : 'ボタンを押して音声メモを入力'}
+                            {isListening ? '🎤 話しかけてください...' : `ボタンを押して${voiceTarget === 'notebook' ? 'ノート' : '付箋'}音声メモを入力`}
                         </span>
                     )}
                 </div>
@@ -213,8 +261,8 @@ const VoiceMemoWidget: React.FC = () => {
 
             {/* テキストがある場合の保存ボタン */}
             {transcript.trim() && (
-                <button className="voice-save-btn btn-primary" onClick={handleSaveSticky}>
-                    📌 「🎙️ 音声メモ」フォルダーに保存
+                <button className="voice-save-btn btn-primary" onClick={handleSave}>
+                    {voiceTarget === 'notebook' ? '📔 今日の日付ノートに保存・追記' : '📌 「🎙️ 音声メモ」フォルダーに保存'}
                 </button>
             )}
         </div>

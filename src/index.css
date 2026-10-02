@@ -3871,6 +3871,558 @@ body {
     }
 }
 
+/* ============================================================
+   📔 A4ルーズリーフ調 ノートシステム (Notebook Module)
+   ============================================================ */
+
+/* ヘッダー */
+.notebook-view-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.notebook-title-area {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.notebook-title-area h1 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.notebook-beta-badge {
+    font-size: 0.72rem;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(168, 85, 247, 0.15));
+    color: var(--accent, #6366f1);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    font-weight: 600;
+}
+
+/* モード切替タブ (日付ログ vs 自由帳) */
+.notebook-mode-tabs {
+    display: flex;
+    background: var(--bg-secondary, rgba(0, 0, 0, 0.05));
+    padding: 4px;
+    border-radius: 10px;
+    gap: 4px;
+    border: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+}
+
+.notebook-mode-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 7px;
+    border: none;
+    background: transparent;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--text-muted, #64748b);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.notebook-mode-btn:hover {
+    color: var(--text-primary);
+}
+
+.notebook-mode-btn.active {
+    background: var(--card-bg, #ffffff);
+    color: var(--accent, #4f46e5);
+    font-weight: 600;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+/* 検索バー */
+.notebook-search-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-width: 220px;
+}
+
+.notebook-search-box .search-icon {
+    position: absolute;
+    left: 10px;
+    color: var(--text-muted, #94a3b8);
+    pointer-events: none;
+}
+
+.notebook-search-input {
+    width: 100%;
+    padding: 7px 30px 7px 32px;
+    font-size: 0.82rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color, rgba(0, 0, 0, 0.12));
+    background: var(--card-bg, #ffffff);
+    color: var(--text-primary);
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.notebook-search-input:focus {
+    border-color: var(--accent, #6366f1);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.notebook-search-box .search-clear-btn {
+    position: absolute;
+    right: 8px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted, #94a3b8);
+    cursor: pointer;
+    padding: 2px;
+    display: flex;
+    align-items: center;
+}
+
+/* ページ操作ツールバー (画面に1枚ずつの送り) */
+.notebook-page-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 10px 16px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    border: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+}
+
+.page-nav-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.page-arrow-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 500;
+}
+
+.page-indicator {
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    min-width: 90px;
+    text-align: center;
+}
+
+.page-actions-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.page-select-dropdown {
+    padding: 6px 10px;
+    font-size: 0.82rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color, rgba(0, 0, 0, 0.12));
+    background: var(--card-bg, #ffffff);
+    color: var(--text-primary);
+    outline: none;
+    max-width: 240px;
+    cursor: pointer;
+}
+
+.add-page-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: 600;
+}
+
+/* A4ステージ & ルーズリーフ用紙 */
+.notebook-stage {
+    display: flex;
+    justify-content: center;
+    padding-bottom: 40px;
+    width: 100%;
+}
+
+.notebook-sheet-a4 {
+    width: 100%;
+    max-width: 860px;
+    min-height: 1050px;
+    margin: 0 auto;
+    border-radius: 12px;
+    padding: 36px 44px;
+    position: relative;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
+    border-left: 5px solid rgba(239, 68, 68, 0.25);
+    display: flex;
+    flex-direction: column;
+    transition: background-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+/* シート上部バー */
+.sheet-header-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding-bottom: 14px;
+    border-bottom: 2px solid rgba(0, 0, 0, 0.08);
+    margin-bottom: 16px;
+}
+
+.sheet-header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.sheet-date-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 6px;
+}
+
+.jump-to-calendar-btn {
+    background: none;
+    border: none;
+    color: var(--accent, #6366f1);
+    font-size: 0.76rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: underline;
+    margin-left: 4px;
+    padding: 0;
+}
+
+/* ツール群: ロック切替、用紙色、添付、削除 */
+.sheet-header-tools {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.sheet-lock-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.sheet-lock-btn.locked {
+    background: rgba(245, 158, 11, 0.12);
+    color: #b45309;
+    border-color: rgba(245, 158, 11, 0.3);
+}
+
+.sheet-lock-btn.locked:hover {
+    background: rgba(245, 158, 11, 0.2);
+}
+
+.sheet-lock-btn.unlocked {
+    background: rgba(16, 185, 129, 0.12);
+    color: #047857;
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+.sheet-lock-btn.unlocked:hover {
+    background: rgba(16, 185, 129, 0.2);
+}
+
+.sheet-color-picker {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(0, 0, 0, 0.04);
+    padding: 3px 6px;
+    border-radius: 20px;
+}
+
+.paper-color-dot {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    transition: transform 0.15s ease;
+    padding: 0;
+}
+
+.paper-color-dot:hover {
+    transform: scale(1.2);
+}
+
+.paper-color-dot.active {
+    outline: 2px solid var(--accent, #6366f1);
+    outline-offset: 1px;
+    transform: scale(1.15);
+}
+
+.sheet-tool-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    background: rgba(255, 255, 255, 0.6);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.sheet-tool-btn:hover {
+    background: rgba(255, 255, 255, 0.95);
+    border-color: var(--accent, #6366f1);
+    color: var(--accent, #6366f1);
+}
+
+.sheet-tool-btn.danger:hover {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: #ef4444;
+    color: #ef4444;
+}
+
+/* ロック中案内通知 */
+.sheet-locked-notice {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+    color: #92400e;
+    font-size: 0.78rem;
+    margin-bottom: 14px;
+}
+
+/* タイトル部 */
+.sheet-title-wrapper {
+    margin-bottom: 16px;
+}
+
+.sheet-title-display {
+    font-size: 1.35rem;
+    font-weight: 700;
+    margin: 0;
+    line-height: 1.4;
+}
+
+.sheet-title-input {
+    width: 100%;
+    font-size: 1.35rem;
+    font-weight: 700;
+    background: transparent;
+    border: none;
+    border-bottom: 2px dashed rgba(0, 0, 0, 0.18);
+    outline: none;
+    color: inherit;
+    padding: 4px 0;
+}
+
+.sheet-title-input:focus {
+    border-bottom-color: var(--accent, #6366f1);
+}
+
+/* 添付画像 */
+.sheet-images-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.sheet-image-card {
+    position: relative;
+    max-width: 220px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.sheet-image-card img {
+    display: block;
+    width: 100%;
+    height: auto;
+    object-fit: cover;
+}
+
+.image-delete-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(0, 0, 0, 0.65);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+/* 本文エリア (32px横罫線にピッタリ同期) */
+.sheet-body-area {
+    flex: 1;
+    position: relative;
+}
+
+.sheet-content-readonly {
+    font-size: 15px;
+    line-height: 32px;
+    min-height: 500px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.sheet-line {
+    min-height: 32px;
+    line-height: 32px;
+}
+
+.sheet-content-textarea {
+    width: 100%;
+    font-size: 15px;
+    line-height: 32px;
+    background: transparent;
+    border: none;
+    outline: none;
+    resize: vertical;
+    color: inherit;
+    font-family: inherit;
+    padding: 0;
+    margin: 0;
+}
+
+.sheet-link {
+    color: var(--accent, #4f46e5);
+    text-decoration: underline;
+    font-weight: 500;
+}
+
+.sheet-empty-text {
+    font-size: 0.9rem;
+    opacity: 0.6;
+    line-height: 32px;
+    margin: 0;
+}
+
+.sheet-empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted, #64748b);
+}
+
+.sheet-empty-state h3 {
+    margin: 12px 0 6px 0;
+    color: var(--text-primary);
+}
+
+/* カレンダーセル上のノートバッジ */
+.day-notebook-badge {
+    font-size: 11px;
+    line-height: 1;
+    padding: 1px 3px;
+    border-radius: 4px;
+    background: rgba(99, 102, 241, 0.12);
+    color: #4f46e5;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+/* スマホ用レスポンシブ (画面幅768px以下) */
+@media (max-width: 768px) {
+    .notebook-view-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .notebook-mode-tabs {
+        width: 100%;
+    }
+
+    .notebook-mode-btn {
+        flex: 1;
+        justify-content: center;
+        padding: 8px 10px;
+        font-size: 0.78rem;
+    }
+
+    .notebook-search-box {
+        width: 100%;
+    }
+
+    .notebook-page-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 8px 12px;
+    }
+
+    .page-nav-controls {
+        justify-content: space-between;
+        width: 100%;
+    }
+
+    .page-actions-controls {
+        width: 100%;
+        display: flex;
+        gap: 6px;
+    }
+
+    .page-select-dropdown {
+        flex: 1;
+        max-width: none;
+    }
+
+    .notebook-sheet-a4 {
+        padding: 24px 18px;
+        border-radius: 8px;
+        border-left: 3px solid rgba(239, 68, 68, 0.25);
+        min-height: 650px;
+    }
+
+    .sheet-title-display,
+    .sheet-title-input {
+        font-size: 1.15rem;
+    }
+
+    .sheet-content-readonly,
+    .sheet-content-textarea {
+        font-size: 14px;
+        line-height: 32px;
+    }
+}
+
+
 
 
 

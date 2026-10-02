@@ -56,10 +56,27 @@ export interface StickyNote {
     folderId?: string;        // 付箋ボード内のフォルダーID
 }
 
+export type NotebookType = 'daily' | 'free';
+
+export interface NotebookNote {
+    id: string;
+    title: string;
+    content: string;
+    type: NotebookType;       // 'daily': 日付ログ, 'free': 自由帳
+    date: string;             // YYYY-MM-DD (作成・紐付け日)
+    color: string;            // 用紙の背景色
+    createdAt: string;        // ISO 8601
+    updatedAt: string;        // ISO 8601
+    isLocked?: boolean;       // 誤消去防止ロック (true: 閲覧中, false: 編集可能)
+    images?: string[];        // 添付画像 (DataURL / URL)
+    order?: number;           // 自由帳用の並び順
+}
+
 export interface AppData {
     timetable: Timetable;
     events: CalendarEvent[];
     memos: Memo[];
     stickies: StickyNote[];
     stickyFolders: StickyFolder[];
+    notebookNotes?: NotebookNote[];
 }
