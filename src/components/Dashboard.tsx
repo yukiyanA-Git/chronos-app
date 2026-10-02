@@ -23,10 +23,12 @@ const STICKY_COLORS = [
 export const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onAddEventClick }) => {
     const {
         data, addSticky, updateSticky, deleteSticky, pinSticky, archiveSticky,
+        addNotebookNote, updateNotebookNote,
         draftStickyText, draftStickyColor, setDraftStickyText, setDraftStickyColor, clearDraftSticky
     } = useApp();
     const debounceTimers = useRef<{ [id: string]: ReturnType<typeof setTimeout> }>({});
     const [notice, setNotice] = useState<string | null>(null);
+    const [inputTarget, setInputTarget] = useState<'sticky' | 'notebook'>('sticky');
 
     const today = new Date();
     const formattedDate = new Intl.DateTimeFormat('ja-JP', { dateStyle: 'full' }).format(today);
@@ -57,6 +59,29 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onAddEventCl
     const handleAddSticky = () => {
         const text = draftStickyText.trim();
         if (!text) return;
+
+        if (inputTarget === 'notebook') {
+            const existingToday = (data.notebookNotes || []).find(n => n.type === 'daily' && n.date === todayStr);
+            const nowTime = new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+            if (existingToday) {
+                updateNotebookNote(existingToday.id, {
+                    content: (existingToday.content ? existingToday.content + '\n' : '') + `[${nowTime}] ${text}`
+                });
+            } else {
+                addNotebookNote({
+                    title: `${todayStr} デイリーログ`,
+                    content: `[${nowTime}] ${text}`,
+                    type: 'daily',
+                    date: todayStr,
+                    color: '#ffffff',
+                    isLocked: true
+                });
+            }
+            setNotice('📔 今日のノートに記録しました。');
+            setTimeout(() => setNotice(null), 6000);
+            clearDraftSticky();
+            return;
+        }
 
         // ピン留めが10件以上ある場合、新規付箋は即座に付箋ボードの保管ストックに押し出される旨を案内
         if (pinnedStickies.length >= 10) {
@@ -209,10 +234,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onAddEventCl
                         {/* 案内トースト */}
                         {notice && (
                             <div className="sticky-overflow-toast">
-                                <span>📌 {notice}</span>
+                                <span>{notice}</span>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <button className="toast-link-btn" onClick={() => onViewChange('memos')}>
-                                        付箋ボードを見る ↗
+                                    <button
+                                        className="toast-link-btn"
+                                        onClick={() => onViewChange(notice.includes('ノート') ? 'notebook' : 'memos')}
+                                    >
+                                        {notice.includes('ノート') ? 'ノートを開く ↗' : '付箋ボードを見る ↗'}
                                     </button>
                                     <button className="toast-close-btn" onClick={() => setNotice(null)}>
                                         <X size={14} />
@@ -221,31 +249,52 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onAddEventCl
                             </div>
                         )}
 
-                        {/* 新規入力エリア (下書き連携・ページ切替でも保持) */}
+                        {/* 新規入力エリア (付箋 / 今日のノートの切替入力) */}
                         <div className="sticky-input-area">
-                            <div className="sticky-color-picker">
-                                {STICKY_COLORS.map(c => (
+                            <div className="sticky-input-mode-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                <div className="target-toggle-group" style={{ display: 'flex', gap: '4px' }}>
                                     <button
-                                        key={c}
-                                        className={`sticky-color-btn ${draftStickyColor === c ? 'active' : ''}`}
-                                        style={{ backgroundColor: c }}
-                                        onClick={() => setDraftStickyColor(c)}
-                                        title={c}
-                                    />
-                                ))}
+                                        type="button"
+                                        className={`target-toggle-btn ${inputTarget === 'sticky' ? 'active' : ''}`}
+                                        onClick={() => setInputTarget('sticky')}
+                                    >
+                                        <StickyNote size={12} /> 付箋を作成
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`target-toggle-btn ${inputTarget === 'notebook' ? 'active' : ''}`}
+                                        onClick={() => setInputTarget('notebook')}
+                                    >
+                                        <BookOpen size={12} /> 今日のノートに記録
+                                    </button>
+                                </div>
+                                {inputTarget === 'sticky' && (
+                                    <div className="sticky-color-picker">
+                                        {STICKY_COLORS.map(c => (
+                                            <button
+                                                key={c}
+                                                type="button"
+                                                className={`sticky-color-btn ${draftStickyColor === c ? 'active' : ''}`}
+                                                style={{ backgroundColor: c }}
+                                                onClick={() => setDraftStickyColor(c)}
+                                                title={c}
+                                            />
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                             <div className="sticky-input-row">
                                 <input
                                     type="text"
                                     className="sticky-new-input"
-                                    placeholder="付箋に書く内容... (Enterで追加)"
+                                    placeholder={inputTarget === 'sticky' ? "付箋に書く内容... (Enterで追加)" : "ノートに書く内容... (Enterで今日の日付ログに記録)"}
                                     value={draftStickyText}
                                     onChange={(e) => setDraftStickyText(e.target.value)}
                                     onKeyDown={(e) => { if (e.key === 'Enter') handleAddSticky(); }}
-                                    style={{ borderColor: draftStickyColor }}
+                                    style={{ borderColor: inputTarget === 'sticky' ? draftStickyColor : '#6366f1' }}
                                 />
                                 <button className="btn btn-sm btn-primary" onClick={handleAddSticky}>
-                                    <Plus size={14} /> 追加
+                                    <Plus size={14} /> {inputTarget === 'sticky' ? '追加' : 'ノートへ記録'}
                                 </button>
                             </div>
                         </div>

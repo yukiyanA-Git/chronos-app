@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import LZString from 'lz-string';
-import type { AppData, CalendarEvent, Memo, Period, StickyNote, TimetableCell } from '../types';
+import type { AppData, CalendarEvent, Memo, Period, StickyNote, TimetableCell, NotebookNote } from '../types';
 import { auth, googleProvider, db } from '../firebase';
 import { signInWithPopup, signOut, onAuthStateChanged, type User } from 'firebase/auth';
 import { doc, setDoc, onSnapshot, getDoc, getDocFromServer } from 'firebase/firestore';
@@ -45,6 +45,15 @@ interface AppContextProps {
     renameStickyFolder: (id: string, name: string) => void;
     deleteStickyFolder: (id: string) => void;
     moveStickyToFolder: (stickyId: string, folderId: string | null) => void;
+    // ノート (Notebook) 操作
+    addNotebookNote: (note: Omit<NotebookNote, 'id' | 'createdAt' | 'updatedAt'>) => string;
+    updateNotebookNote: (id: string, updates: Partial<NotebookNote>) => void;
+    deleteNotebookNote: (id: string) => void;
+    addVoiceNotebookNote: (content: string) => void;
+    targetNotebookDate: string | null;
+    setTargetNotebookDate: (date: string | null) => void;
+    draftNotebookContent: string;
+    setDraftNotebookContent: (content: string) => void;
     getShareURL: () => string;
     importShareData: (compressed: string) => boolean;
     importFromJSON: (jsonText: string) => boolean;
@@ -81,7 +90,8 @@ const EMPTY_DATA: AppData = {
     events: [],
     memos: [],
     stickies: [],
-    stickyFolders: []
+    stickyFolders: [],
+    notebookNotes: []
 };
 
 // どんなデータが入っていてもクラッシュさせない安全ガード関数
@@ -96,7 +106,8 @@ const sanitizeData = (raw: any): AppData => {
         events: Array.isArray(raw.events) ? raw.events : [],
         memos: Array.isArray(raw.memos) ? raw.memos : [],
         stickies: Array.isArray(raw.stickies) ? raw.stickies : [],
-        stickyFolders: Array.isArray(raw.stickyFolders) ? raw.stickyFolders : []
+        stickyFolders: Array.isArray(raw.stickyFolders) ? raw.stickyFolders : [],
+        notebookNotes: Array.isArray(raw.notebookNotes) ? raw.notebookNotes : []
     };
 };
 
@@ -122,6 +133,11 @@ const mergeAppData = (base: AppData, incoming: AppData): AppData => {
     (base.memos || []).forEach(m => memoMap.set(m.id, m));
     (incoming.memos || []).forEach(m => memoMap.set(m.id, m));
 
+    // ノートの統合 (ID重複排除)
+    const notebookMap = new Map<string, NotebookNote>();
+    (base.notebookNotes || []).forEach(n => notebookMap.set(n.id, n));
+    (incoming.notebookNotes || []).forEach(n => notebookMap.set(n.id, n));
+
     // 時間割セルの統合 (両方にあるコマをすべて保持)
     const mergedCells = {
         ...(base.timetable?.cells || {}),
@@ -137,7 +153,8 @@ const mergeAppData = (base: AppData, incoming: AppData): AppData => {
         events: Array.from(eventMap.values()),
         memos: Array.from(memoMap.values()),
         stickies: Array.from(stickyMap.values()),
-        stickyFolders: Array.from(folderMap.values())
+        stickyFolders: Array.from(folderMap.values()),
+        notebookNotes: Array.from(notebookMap.values())
     };
 };
 
@@ -601,6 +618,67 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
     };
 
+    // ノート (Notebook) 操作
+    const [targetNotebookDate, setTargetNotebookDate] = useState<string | null>(null);
+    const [draftNotebookContent, setDraftNotebookContent] = useState<string>('');
+
+    const addNotebookNote = (note: Omit<NotebookNote, 'id' | 'createdAt' | 'updatedAt'>): string => {
+        const id = 'note-' + Date.now().toString();
+        const now = new Date().toISOString();
+        const newNote: NotebookNote = {
+            ...note,
+            id,
+            isLocked: note.isLocked !== undefined ? note.isLocked : true,
+            createdAt: now,
+            updatedAt: now
+        };
+        saveData({
+            ...data,
+            notebookNotes: [newNote, ...(data.notebookNotes || [])]
+        });
+        return id;
+    };
+
+    const updateNotebookNote = (id: string, updates: Partial<NotebookNote>) => {
+        const now = new Date().toISOString();
+        saveData({
+            ...data,
+            notebookNotes: (data.notebookNotes || []).map(n => n.id === id ? {
+                ...n,
+                ...updates,
+                updatedAt: now
+            } : n)
+        });
+    };
+
+    const deleteNotebookNote = (id: string) => {
+        saveData({
+            ...data,
+            notebookNotes: (data.notebookNotes || []).filter(n => n.id !== id)
+        });
+    };
+
+    const addVoiceNotebookNote = (content: string) => {
+        const todayStr = new Date().toLocaleDateString('sv-SE');
+        const existingTodayDaily = (data.notebookNotes || []).find(n => n.type === 'daily' && n.date === todayStr);
+        const nowTime = new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+
+        if (existingTodayDaily) {
+            updateNotebookNote(existingTodayDaily.id, {
+                content: (existingTodayDaily.content ? existingTodayDaily.content + '\n' : '') + `[🎙️ ${nowTime}] ${content}`
+            });
+        } else {
+            addNotebookNote({
+                title: `${todayStr} デイリーログ`,
+                content: `[🎙️ ${nowTime}] ${content}`,
+                type: 'daily',
+                date: todayStr,
+                color: '#ffffff',
+                isLocked: true
+            });
+        }
+    };
+
     // 共有URL生成 (互換性保持)
     const getShareURL = (): string => {
         const json = JSON.stringify(data);
@@ -840,6 +918,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             renameStickyFolder,
             deleteStickyFolder,
             moveStickyToFolder,
+            addNotebookNote,
+            updateNotebookNote,
+            deleteNotebookNote,
+            addVoiceNotebookNote,
+            targetNotebookDate,
+            setTargetNotebookDate,
+            draftNotebookContent,
+            setDraftNotebookContent,
             getShareURL,
             importShareData,
             importFromJSON,
