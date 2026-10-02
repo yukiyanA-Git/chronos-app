@@ -209,7 +209,7 @@ export const Settings: React.FC<SettingsProps> = ({ onExportClick }) => {
                         <Sparkles size={20} /> プラン管理（広告非表示 ＆ ノート無制限）
                     </h2>
                     <p className="description">
-                        Chronos の利用プラン設定です。広告を非表示にし、自由帳のノート冊数を無制限に拡張できます。
+                        Chronos の利用プラン設定です。広告を非表示にし、ノートを上限なく何冊でも作成・利用できます。
                     </p>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '14px', background: 'rgba(0,0,0,0.2)', borderRadius: '12px' }}>
@@ -245,11 +245,11 @@ export const Settings: React.FC<SettingsProps> = ({ onExportClick }) => {
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                 <span>{isPremium ? '✅' : '📕'}</span>
-                                <span>自由帳ノート冊数: <strong>{isPremium ? '無制限 (何冊でも作成可能)' : '最大10冊まで'}</strong></span>
+                                <span>ノート作成数: <strong>{isPremium ? '無制限 (何冊でも作成可能)' : '最大10冊まで'}</strong></span>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                 <span>✅</span>
-                                <span>ノートページ数 ＆ 日付ログ: <strong>常に無制限 (無料・有料共通)</strong></span>
+                                <span>ノートページ数 ＆ 日付ノート: <strong>常に無制限 (無料・有料共通)</strong></span>
                             </div>
                         </div>
                     </div>

@@ -48,31 +48,39 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
         }
     });
 
-    // 自由帳のノート冊子(本)リスト (並び替え対応)
+    // 自由ノートのタイトルの標準化 (旧「自由帳 (メイン)」からの移行)
+    const normalizeBookTitle = (title?: string) => {
+        if (!title || title === '自由帳 (メイン)') return '自由ノート (メイン)';
+        return title;
+    };
+
+    // 自由ノートのリスト (並び替え対応)
     const freeBooks = useMemo(() => {
         const allBookTitles = new Set<string>();
         notes.filter(n => n.type === 'free').forEach(n => {
-            allBookTitles.add(n.bookTitle || '自由帳 (メイン)');
+            allBookTitles.add(normalizeBookTitle(n.bookTitle));
         });
-        if (allBookTitles.size === 0) allBookTitles.add('自由帳 (メイン)');
+        if (allBookTitles.size === 0) allBookTitles.add('自由ノート (メイン)');
 
         const result: string[] = [];
         freeBooksOrder.forEach(title => {
-            if (allBookTitles.has(title)) {
-                result.push(title);
-                allBookTitles.delete(title);
+            const normTitle = normalizeBookTitle(title);
+            if (allBookTitles.has(normTitle) && !result.includes(normTitle)) {
+                result.push(normTitle);
+                allBookTitles.delete(normTitle);
             }
         });
         allBookTitles.forEach(title => result.push(title));
         return result;
     }, [notes, freeBooksOrder]);
 
-    // 自由帳の冊数上限到達判定 (無料プラン時10冊、プレミアム時は無制限)
+    // ノート作成上限（10冊）到達判定 (無料プラン時10冊、プレミアム時は無制限)
     const isBookLimitReached = !isPremium && freeBooks.length >= MAX_FREE_BOOKS;
 
-    // 選択中のノート冊子(本)名 - 直前の選択を記憶
+    // 選択中のノート名 - 直前の選択を記憶
     const [selectedBook, setSelectedBook] = useState<string>(() => {
-        return localStorage.getItem('chronos_last_notebook_book') || '自由帳 (メイン)';
+        const saved = localStorage.getItem('chronos_last_notebook_book');
+        return normalizeBookTitle(saved || undefined);
     });
 
     // 新規ノート(冊)作成ダイアログ
@@ -126,9 +134,9 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
             const noteType = n.type || 'daily';
             if (noteType !== currentType) return false;
 
-            // 自由帳モード時は選択中の本(冊)で絞り込み (検索中以外)
+            // 自由ノートモード時は選択中のノートで絞り込み (検索中以外)
             if (currentType === 'free' && !searchQuery.trim()) {
-                const book = n.bookTitle || '自由帳 (メイン)';
+                const book = normalizeBookTitle(n.bookTitle);
                 if (book !== selectedBook) return false;
             }
 
@@ -242,8 +250,8 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
             });
             setActiveNoteId(newId);
         } else {
-            // 自由帳: 現在選択中の本(冊)の末尾に次のページを追加
-            const currentBookNotes = notes.filter(n => n.type === 'free' && (n.bookTitle || '自由帳 (メイン)') === selectedBook);
+            // 自由ノート: 現在選択中のノートの末尾に次のページを追加
+            const currentBookNotes = notes.filter(n => n.type === 'free' && normalizeBookTitle(n.bookTitle) === selectedBook);
             const nextPageNum = currentBookNotes.length + 1;
             newTitle = `${selectedBook} - ${nextPageNum}ページ`;
 
@@ -364,12 +372,12 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
         }
     };
 
-    // モード切替: 自由帳へ
+    // モード切替: 自由ノートへ
     const handleSwitchToFree = () => {
         setCurrentType('free');
         setSearchQuery('');
         const bookNotes = notes
-            .filter(n => n.type === 'free' && (n.bookTitle || '自由帳 (メイン)') === selectedBook)
+            .filter(n => n.type === 'free' && normalizeBookTitle(n.bookTitle) === selectedBook)
             .sort((a, b) => {
                 if (a.pageNumber !== undefined && b.pageNumber !== undefined) {
                     return a.pageNumber - b.pageNumber;
@@ -484,7 +492,7 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                     <span className="notebook-beta-badge">A4ルーズリーフ調</span>
                 </div>
 
-                {/* モード切替タブ (日付ログ vs 自由帳) */}
+                {/* モード切替タブ (日付ログ vs 自由ノート) */}
                 <div className="notebook-mode-tabs">
                     <button
                         className={`notebook-mode-btn ${currentType === 'daily' ? 'active' : ''}`}
@@ -496,9 +504,9 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                     <button
                         className={`notebook-mode-btn ${currentType === 'free' ? 'active' : ''}`}
                         onClick={handleSwitchToFree}
-                        title="テーマやタイトルごとに自由にまとめる思考ノート (冊数管理)"
+                        title="テーマやタイトルごとに自由にまとめるノート (10冊まで)"
                     >
-                        <FileText size={15} /> 自由帳 (ノート冊子別)
+                        <FileText size={15} /> 自由ノート
                     </button>
                 </div>
 
@@ -520,12 +528,12 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                 </div>
             </header>
 
-            {/* 自由帳モード時: 本(冊)の選択シェルフ (要件②: 冊数と見たい本・書きたい本の選び方 & 順番入替) */}
+            {/* 自由ノート時: ノート選択バー */}
             {currentType === 'free' && (
                 <div className="notebook-bookshelf-bar glass">
                     <div className="bookshelf-header">
                         <span className="bookshelf-label">
-                            <Bookmark size={15} /> <strong>ノート冊子 (本) を選択:</strong>
+                            <Bookmark size={15} /> <strong>ノートを選択:</strong>
                             <span style={{
                                 fontSize: '0.75rem',
                                 marginLeft: '8px',
@@ -535,7 +543,7 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                                 color: isPremium ? '#10b981' : isBookLimitReached ? '#ef4444' : 'inherit',
                                 fontWeight: 600
                             }}>
-                                {isPremium ? '👑 冊数無制限 (プレミアム)' : `${freeBooks.length}/${MAX_FREE_BOOKS}冊`}
+                                {isPremium ? '👑 無制限 (プレミアム)' : `${freeBooks.length}/${MAX_FREE_BOOKS}冊`}
                             </span>
                         </span>
                         <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginLeft: 'auto', flexWrap: 'wrap' }}>
@@ -546,20 +554,20 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                                         className="btn btn-sm btn-secondary"
                                         onClick={() => handleMoveBook('left')}
                                         disabled={freeBooks.indexOf(selectedBook) <= 0}
-                                        title="選択中の本を左へ並び替え"
+                                        title="選択中のノートを左へ並び替え"
                                         style={{ padding: '3px 8px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '2px' }}
                                     >
-                                        <ChevronLeft size={13} /> 本を左へ
+                                        <ChevronLeft size={13} /> 左へ移動
                                     </button>
                                     <button
                                         type="button"
                                         className="btn btn-sm btn-secondary"
                                         onClick={() => handleMoveBook('right')}
                                         disabled={freeBooks.indexOf(selectedBook) >= freeBooks.length - 1}
-                                        title="選択中の本を右へ並び替え"
+                                        title="選択中のノートを右へ並び替え"
                                         style={{ padding: '3px 8px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '2px' }}
                                     >
-                                        本を右へ <ChevronRight size={13} />
+                                        右へ移動 <ChevronRight size={13} />
                                     </button>
                                 </div>
                             )}
@@ -574,15 +582,15 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                                         setShowNewBookModal(true);
                                     }
                                 }}
-                                title={isBookLimitReached ? "無料プラン上限（10冊）に達しています" : "新しいノート(冊)を追加"}
+                                title={isBookLimitReached ? "上限（10冊）に達しています" : "新しいノートを作成"}
                             >
-                                <Plus size={14} /> ＋ 新しいノート(冊)を作成
+                                <Plus size={14} /> 新しいノートを作成
                             </button>
                         </div>
                     </div>
                     <div className="bookshelf-tabs-row">
                         {freeBooks.map(book => {
-                            const count = notes.filter(n => n.type === 'free' && (n.bookTitle || '自由帳 (メイン)') === book).length;
+                            const count = notes.filter(n => n.type === 'free' && normalizeBookTitle(n.bookTitle) === book).length;
                             const isSelected = selectedBook === book;
                             return (
                                 <button
@@ -1008,26 +1016,26 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                 )}
             </div>
 
-            {/* 新しいノート冊子(本)の作成モーダル */}
+            {/* 新しいノート作成モーダル */}
             {showNewBookModal && (
-                <div className="modal-backdrop" onClick={() => setShowNewBookModal(false)}>
-                    <div className="modal-container glass" onClick={e => e.stopPropagation()} style={{ maxWidth: '420px' }}>
+                <div className="modal-overlay" onClick={() => setShowNewBookModal(false)}>
+                    <div className="modal glass" onClick={e => e.stopPropagation()} style={{ maxWidth: '420px' }}>
                         <div className="modal-header">
-                            <h3><BookOpen size={18} /> 新しいノート（冊）を作成</h3>
+                            <h3><BookOpen size={18} /> 新しいノートを作成</h3>
                             <button className="btn-close" onClick={() => setShowNewBookModal(false)}><X size={16} /></button>
                         </div>
-                        <div className="modal-body" style={{ padding: '16px' }}>
+                        <div className="modal-body" style={{ padding: '4px 0 0 0' }}>
                             <p style={{ fontSize: '0.85rem', color: 'var(--text-muted, #94a3b8)', marginBottom: '12px' }}>
-                                用途やテーマごとに新しいノート冊子を作成します。<br />
-                                （例: 企画アイデア帳、業務マニュアル、読書メモ、議事録など）
+                                用途やテーマごとに新しいノートを作成します。<br />
+                                （例: 企画アイデア、業務マニュアル、読書メモ、議事録など）
                             </p>
                             <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: '6px' }}>
-                                ノートの名前（冊名）:
+                                ノート名:
                             </label>
                             <input
                                 type="text"
                                 className="form-input"
-                                placeholder="例: 企画アイデアノート"
+                                placeholder="例: 企画アイデア"
                                 value={newBookTitleInput}
                                 onChange={e => setNewBookTitleInput(e.target.value)}
                                 onKeyDown={e => { if (e.key === 'Enter') handleConfirmCreateNewBook(); }}
@@ -1045,8 +1053,8 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
 
             {/* 過去日付・指定日付でのノート作成モーダル */}
             {showCustomDateModal && (
-                <div className="modal-backdrop" onClick={() => setShowCustomDateModal(false)}>
-                    <div className="modal-container glass" onClick={e => e.stopPropagation()} style={{ maxWidth: '420px' }}>
+                <div className="modal-overlay" onClick={() => setShowCustomDateModal(false)}>
+                    <div className="modal glass" onClick={e => e.stopPropagation()} style={{ maxWidth: '420px' }}>
                         <div className="modal-header">
                             <h3><CalendarDays size={18} /> 日付を指定してノートを作成</h3>
                             <button className="btn-close" onClick={() => setShowCustomDateModal(false)}><X size={16} /></button>
@@ -1130,10 +1138,10 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                 </div>
             )}
 
-            {/* 自由帳の日付紐付けモーダル */}
+            {/* カレンダー連動日の設定モーダル */}
             {showDateModal && (
-                <div className="modal-backdrop" onClick={() => setShowDateModal(false)}>
-                    <div className="modal-container glass" onClick={e => e.stopPropagation()} style={{ maxWidth: '380px' }}>
+                <div className="modal-overlay" onClick={() => setShowDateModal(false)}>
+                    <div className="modal glass" onClick={e => e.stopPropagation()} style={{ maxWidth: '380px' }}>
                         <div className="modal-header">
                             <h3>カレンダー連動日の設定</h3>
                             <button className="btn-close" onClick={() => setShowDateModal(false)}><X size={16} /></button>
@@ -1171,25 +1179,25 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                 </div>
             )}
 
-            {/* 自由帳の10冊上限＆プレミアム案内モーダル */}
+            {/* ノート10冊上限＆プレミアム案内モーダル */}
             {showBookLimitModal && (
-                <div className="modal-backdrop" onClick={() => setShowBookLimitModal(false)}>
-                    <div className="modal-container glass" onClick={e => e.stopPropagation()} style={{ maxWidth: '440px' }}>
+                <div className="modal-overlay" onClick={() => setShowBookLimitModal(false)}>
+                    <div className="modal glass" onClick={e => e.stopPropagation()} style={{ maxWidth: '440px' }}>
                         <div className="modal-header">
                             <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#f59e0b' }}>
-                                📕 自由帳の冊数上限 (10冊)
+                                📕 ノート作成上限 (10冊)
                             </h3>
                             <button className="btn-close" onClick={() => setShowBookLimitModal(false)}><X size={16} /></button>
                         </div>
                         <div className="modal-body" style={{ padding: '20px' }}>
                             <div style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid #f59e0b', borderRadius: '10px', padding: '12px 14px', marginBottom: '16px' }}>
                                 <strong style={{ color: '#f59e0b', fontSize: '0.95rem', display: 'block', marginBottom: '6px' }}>
-                                    無料プランの自由帳上限（10冊）に達しています
+                                    無料プランのノート作成上限（10冊）に達しています
                                 </strong>
                                 <p style={{ fontSize: '0.85rem', lineHeight: 1.6, margin: 0, opacity: 0.9 }}>
-                                    現在のプランでは、自由帳は<strong>最大10冊まで</strong>作成可能です。<br />
-                                    ※ 既存の冊子内の<strong>ページ数は無制限</strong>で何ページでも追加できます。<br />
-                                    ※ <strong>日付ログ（業務日誌）も無制限</strong>で毎日何ページでも記録できます。
+                                    無料プランでは、ノートは<strong>最大10冊まで</strong>作成可能です。<br />
+                                    ※ 各ノート内の<strong>ページ数は無制限</strong>で何ページでも追加できます。<br />
+                                    ※ <strong>日付ノートも無制限</strong>で毎日何ページでも記録できます。
                                 </p>
                             </div>
 
@@ -1199,7 +1207,7 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                                     <strong style={{ fontSize: '0.9rem', color: '#10b981' }}>プレミアムプランで無制限に</strong>
                                 </div>
                                 <p style={{ fontSize: '0.8rem', lineHeight: 1.5, opacity: 0.8, margin: 0 }}>
-                                    今後提供される「広告非表示＆無制限プラン」をご利用いただくと、ノート冊数を上限なく無制限に作成・整理できるようになります。
+                                    今後提供される「広告非表示＆無制限プラン」をご利用いただくと、ノートを上限なく何冊でも作成・整理できるようになります。
                                 </p>
                             </div>
 

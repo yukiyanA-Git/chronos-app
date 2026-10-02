@@ -62,16 +62,16 @@ export interface NotebookNote {
     id: string;
     title: string;
     content: string;
-    type: NotebookType;       // 'daily': 日付ログ, 'free': 自由帳
+    type: NotebookType;       // 'daily': 日付ノート, 'free': 自由ノート
     date: string;             // YYYY-MM-DD (作成・紐付け日)
     color: string;            // 用紙の背景色
     createdAt: string;        // ISO 8601
     updatedAt: string;        // ISO 8601
     isLocked?: boolean;       // 誤消去防止ロック (true: 閲覧中, false: 編集可能)
     images?: string[];        // 添付画像 (DataURL / URL)
-    order?: number;           // 自由帳用の並び順
-    bookTitle?: string;       // 自由帳のノート冊名 (例: "自由帳 (メイン)", "業務マニュアル")
-    pageNumber?: number;      // 冊子内でのページ番号
+    order?: number;           // 自由ノート用の並び順
+    bookTitle?: string;       // 自由ノートのノート名 (例: "自由ノート (メイン)", "業務マニュアル")
+    pageNumber?: number;      // ノート内でのページ番号
 }
 
 export interface AppData {
