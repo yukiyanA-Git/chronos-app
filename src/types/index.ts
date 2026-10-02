@@ -70,6 +70,8 @@ export interface NotebookNote {
     isLocked?: boolean;       // 誤消去防止ロック (true: 閲覧中, false: 編集可能)
     images?: string[];        // 添付画像 (DataURL / URL)
     order?: number;           // 自由帳用の並び順
+    bookTitle?: string;       // 自由帳のノート冊名 (例: "自由帳 (メイン)", "業務マニュアル")
+    pageNumber?: number;      // 冊子内でのページ番号
 }
 
 export interface AppData {

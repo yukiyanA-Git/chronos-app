@@ -1,20 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import type { NotebookType } from '../types';
 import {
     BookOpen, Calendar as CalendarIcon, FileText, ChevronLeft, ChevronRight,
     Plus, Lock, Unlock, Search, Trash2, Image, ExternalLink,
-    Printer, CalendarDays, X
+    Printer, CalendarDays, X, Bookmark
 } from 'lucide-react';
 
 interface NotebookProps {
     onViewChange?: (view: string) => void;
 }
 
-// 用紙カラープリセット
+// 用紙カラープリセット (下地色と罫線色)
 export const NOTEBOOK_PAPERS = [
-    { id: 'white', label: '白紙 (クラシック)', color: '#ffffff', textColor: '#1e293b', lineColor: 'rgba(59, 130, 246, 0.2)' },
-    { id: 'ivory', label: '生成り (アイボリー)', color: '#fefcf3', textColor: '#292524', lineColor: 'rgba(217, 119, 6, 0.2)' },
+    { id: 'white', label: '白紙 (クラシック)', color: '#ffffff', textColor: '#1e293b', lineColor: 'rgba(59, 130, 246, 0.22)' },
+    { id: 'ivory', label: '生成り (アイボリー)', color: '#fefcf3', textColor: '#292524', lineColor: 'rgba(217, 119, 6, 0.22)' },
     { id: 'yellow', label: 'リーガルパッド (黄)', color: '#fef9c3', textColor: '#292524', lineColor: 'rgba(202, 138, 4, 0.25)' },
     { id: 'green', label: 'ミント (薄緑)', color: '#dcfce7', textColor: '#14532d', lineColor: 'rgba(22, 163, 74, 0.22)' },
     { id: 'blue', label: 'スカイ (薄青)', color: '#e0f2fe', textColor: '#0c4a6e', lineColor: 'rgba(2, 132, 199, 0.22)' },
@@ -34,6 +34,23 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
     // モード切替: 'daily' (日付順ログ) / 'free' (自由帳)
     const [currentType, setCurrentType] = useState<NotebookType>('daily');
 
+    // 自由帳のノート冊子(本)リスト
+    const freeBooks = useMemo(() => {
+        const set = new Set<string>();
+        notes.filter(n => n.type === 'free').forEach(n => {
+            set.add(n.bookTitle || '自由帳 (メイン)');
+        });
+        if (set.size === 0) set.add('自由帳 (メイン)');
+        return Array.from(set);
+    }, [notes]);
+
+    // 選択中のノート冊子(本)名
+    const [selectedBook, setSelectedBook] = useState<string>('自由帳 (メイン)');
+
+    // 新規ノート(冊)作成ダイアログ
+    const [showNewBookModal, setShowNewBookModal] = useState(false);
+    const [newBookTitleInput, setNewBookTitleInput] = useState('');
+
     // 検索キーワード
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -44,31 +61,48 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
     const [showDateModal, setShowDateModal] = useState(false);
     const [attachDateInput, setAttachDateInput] = useState('');
 
-    // タイプと検索でフィルタリングしたノート一覧
-    const filteredNotes = notes.filter(n => {
-        // タイプ一致 (古いデータなどでtypeが無い場合はdaily扱い)
-        const noteType = n.type || 'daily';
-        if (noteType !== currentType) return false;
+    // 現在の選択冊子がfreeBooksにない場合は先頭にフォールバック
+    useEffect(() => {
+        if (freeBooks.length > 0 && !freeBooks.includes(selectedBook)) {
+            setSelectedBook(freeBooks[0]);
+        }
+    }, [freeBooks, selectedBook]);
 
-        // 検索ワード判定 (タイトル、本文、日付)
-        if (searchQuery.trim()) {
-            const q = searchQuery.toLowerCase();
-            const matchTitle = (n.title || '').toLowerCase().includes(q);
-            const matchContent = (n.content || '').toLowerCase().includes(q);
-            const matchDate = (n.date || '').toLowerCase().includes(q);
-            return matchTitle || matchContent || matchDate;
-        }
-        return true;
-    }).sort((a, b) => {
-        if (currentType === 'daily') {
-            // 日付順（新しい順）
-            return b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt);
-        } else {
-            // 自由帳: order順または更新順
-            if (a.order !== undefined && b.order !== undefined) return a.order - b.order;
-            return b.updatedAt.localeCompare(a.updatedAt);
-        }
-    });
+    // タイプと検索・冊子でフィルタリングしたノート一覧
+    const filteredNotes = useMemo(() => {
+        return notes.filter(n => {
+            const noteType = n.type || 'daily';
+            if (noteType !== currentType) return false;
+
+            // 自由帳モード時は選択中の本(冊)で絞り込み (検索中以外)
+            if (currentType === 'free' && !searchQuery.trim()) {
+                const book = n.bookTitle || '自由帳 (メイン)';
+                if (book !== selectedBook) return false;
+            }
+
+            // 検索ワード判定 (タイトル、本文、日付、本名)
+            if (searchQuery.trim()) {
+                const q = searchQuery.toLowerCase();
+                const matchTitle = (n.title || '').toLowerCase().includes(q);
+                const matchContent = (n.content || '').toLowerCase().includes(q);
+                const matchDate = (n.date || '').toLowerCase().includes(q);
+                const matchBook = (n.bookTitle || '').toLowerCase().includes(q);
+                return matchTitle || matchContent || matchDate || matchBook;
+            }
+            return true;
+        }).sort((a, b) => {
+            if (currentType === 'daily') {
+                // 日付順（新しい日付順、同日内は作成順）
+                return b.date.localeCompare(a.date) || a.createdAt.localeCompare(b.createdAt);
+            } else {
+                // 自由帳: ページ番号順 (作成日時昇順)
+                if (a.pageNumber !== undefined && b.pageNumber !== undefined) {
+                    return a.pageNumber - b.pageNumber;
+                }
+                return a.createdAt.localeCompare(b.createdAt);
+            }
+        });
+    }, [notes, currentType, selectedBook, searchQuery]);
 
     // カレンダーから特定の日付が指定されて遷移してきた場合の自動同期
     useEffect(() => {
@@ -85,7 +119,7 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                     type: 'daily',
                     date: targetNotebookDate,
                     color: '#ffffff',
-                    isLocked: false // 新規時はすぐに書けるようロック解除
+                    isLocked: false
                 });
                 setActiveNoteId(newId);
             }
@@ -107,30 +141,65 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
     const activeIndex = filteredNotes.findIndex(n => n.id === activeNoteId);
     const activeNote = filteredNotes.find(n => n.id === activeNoteId);
 
-    // 新規ページ作成
+    // 新規ノート冊子(本)の作成
+    const handleConfirmCreateNewBook = () => {
+        const title = newBookTitleInput.trim() || `新しいノート ${freeBooks.length + 1}`;
+        setSelectedBook(title);
+        setShowNewBookModal(false);
+        setNewBookTitleInput('');
+
+        // 作成した冊子の第1ページ目を即座に生成
+        const todayStr = new Date().toLocaleDateString('sv-SE');
+        const newId = addNotebookNote({
+            title: `${title} - 1ページ`,
+            content: '',
+            type: 'free',
+            bookTitle: title,
+            pageNumber: 1,
+            date: todayStr,
+            color: '#ffffff',
+            isLocked: false
+        });
+        setActiveNoteId(newId);
+    };
+
+    // 新規ページ作成 (次のページを追加)
     const handleCreatePage = () => {
         const todayStr = new Date().toLocaleDateString('sv-SE');
         let newTitle = '';
         if (currentType === 'daily') {
-            // 同じ日付のページ数をカウント
             const sameDayNotes = notes.filter(n => n.type === 'daily' && n.date === todayStr);
             newTitle = sameDayNotes.length > 0
                 ? `${todayStr} デイリーログ (#${sameDayNotes.length + 1})`
                 : `${todayStr} デイリーログ`;
-        } else {
-            const freeCount = notes.filter(n => n.type === 'free').length;
-            newTitle = `無題のノート ${freeCount + 1}`;
-        }
 
-        const newId = addNotebookNote({
-            title: newTitle,
-            content: '',
-            type: currentType,
-            date: todayStr,
-            color: '#ffffff',
-            isLocked: false // 作成直後は入力できるようにロック解除状態
-        });
-        setActiveNoteId(newId);
+            const newId = addNotebookNote({
+                title: newTitle,
+                content: '',
+                type: 'daily',
+                date: todayStr,
+                color: activeNote?.color || '#ffffff',
+                isLocked: false
+            });
+            setActiveNoteId(newId);
+        } else {
+            // 自由帳: 現在選択中の本(冊)の末尾に次のページを追加
+            const currentBookNotes = notes.filter(n => n.type === 'free' && (n.bookTitle || '自由帳 (メイン)') === selectedBook);
+            const nextPageNum = currentBookNotes.length + 1;
+            newTitle = `${selectedBook} - ${nextPageNum}ページ`;
+
+            const newId = addNotebookNote({
+                title: newTitle,
+                content: '',
+                type: 'free',
+                bookTitle: selectedBook,
+                pageNumber: nextPageNum,
+                date: todayStr,
+                color: activeNote?.color || '#ffffff',
+                isLocked: false
+            });
+            setActiveNoteId(newId);
+        }
     };
 
     // ページ送り (前へ / 次へ)
@@ -164,15 +233,15 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
         updateNotebookNote(activeNote.id, { title });
     };
 
-    // 用紙色変更
+    // 用紙カラー変更
     const handleColorChange = (color: string) => {
         if (!activeNote || activeNote.isLocked) return;
         updateNotebookNote(activeNote.id, { color });
     };
 
-    // 削除
+    // ページ削除
     const handleDelete = () => {
-        if (!activeNote) return;
+        if (!activeNote || activeNote.isLocked) return;
         if (window.confirm(`「${activeNote.title || 'このページ'}」を削除してもよろしいですか？`)) {
             deleteNotebookNote(activeNote.id);
         }
@@ -208,38 +277,31 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
         setShowDateModal(false);
     };
 
-    // 印刷
+    // 印刷・PDF出力
     const handlePrint = () => {
         window.print();
     };
 
-    // ハイパーリンクを自動リンク化してレンダリングする関数 (閲覧モード用)
-    const renderContentWithLinks = (text: string) => {
-        const urlRegex = /(https?:\/\/[^\s]+)/g;
-        return text.split('\n').map((line, lineIdx) => {
-            const parts = line.split(urlRegex);
-            return (
-                <div key={lineIdx} className="notebook-line-text">
-                    {parts.map((part, partIdx) => {
-                        if (part.match(urlRegex)) {
-                            return (
-                                <a
-                                    key={partIdx}
-                                    href={part}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="notebook-inline-link"
-                                    onClick={(e) => e.stopPropagation()}
-                                >
-                                    {part} <ExternalLink size={12} style={{ display: 'inline' }} />
-                                </a>
-                            );
-                        }
-                        return part;
-                    })}
-                    {line === '' && <br />}
-                </div>
-            );
+    // ハイパーリンク描画ヘルパー
+    const renderLineContent = (line: string) => {
+        if (!line) return <span>&nbsp;</span>;
+        const parts = line.split(/(https?:\/\/[^\s]+)/g);
+        return parts.map((part, pIdx) => {
+            if (part.match(/^https?:\/\//)) {
+                return (
+                    <a
+                        key={pIdx}
+                        href={part}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="notebook-inline-link"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {part} <ExternalLink size={12} style={{ display: 'inline', verticalAlign: 'middle' }} />
+                    </a>
+                );
+            }
+            return <span key={pIdx}>{part}</span>;
         });
     };
 
@@ -251,10 +313,10 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
             <header className="view-header notebook-view-header">
                 <div className="notebook-title-area">
                     <h1><BookOpen size={22} /> ノート</h1>
-                    <span className="notebook-beta-badge">A4ルーズリーフ調 (Beta)</span>
+                    <span className="notebook-beta-badge">A4ルーズリーフ調</span>
                 </div>
 
-                {/* モード切替タブ */}
+                {/* モード切替タブ (日付ログ vs 自由帳) */}
                 <div className="notebook-mode-tabs">
                     <button
                         className={`notebook-mode-btn ${currentType === 'daily' ? 'active' : ''}`}
@@ -266,9 +328,9 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                     <button
                         className={`notebook-mode-btn ${currentType === 'free' ? 'active' : ''}`}
                         onClick={() => { setCurrentType('free'); setSearchQuery(''); }}
-                        title="テーマやタイトルごとに自由にまとめる思考ノート"
+                        title="テーマやタイトルごとに自由にまとめる思考ノート (冊数管理)"
                     >
-                        <FileText size={15} /> 自由帳 (トピック別)
+                        <FileText size={15} /> 自由帳 (ノート冊子別)
                     </button>
                 </div>
 
@@ -290,9 +352,46 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                 </div>
             </header>
 
-            {/* ナビゲーションバー (1枚ずつのページ送り ＆ ページインジケーター) */}
-            <div className="notebook-page-toolbar glass">
-                <div className="page-nav-controls">
+            {/* 自由帳モード時: 本(冊)の選択シェルフ (要件②: 冊数と見たい本・書きたい本の選び方) */}
+            {currentType === 'free' && (
+                <div className="notebook-bookshelf-bar glass">
+                    <div className="bookshelf-header">
+                        <span className="bookshelf-label">
+                            <Bookmark size={15} /> <strong>ノート冊子 (本) を選択:</strong>
+                        </span>
+                        <button
+                            type="button"
+                            className="btn btn-sm btn-outline-primary add-book-btn"
+                            onClick={() => { setNewBookTitleInput(''); setShowNewBookModal(true); }}
+                            title="新しいノート(冊)を追加"
+                        >
+                            <Plus size={14} /> ＋ 新しいノート(冊)を作成
+                        </button>
+                    </div>
+                    <div className="bookshelf-tabs-row">
+                        {freeBooks.map(book => {
+                            const count = notes.filter(n => n.type === 'free' && (n.bookTitle || '自由帳 (メイン)') === book).length;
+                            const isSelected = selectedBook === book;
+                            return (
+                                <button
+                                    key={book}
+                                    type="button"
+                                    className={`book-pill-tab ${isSelected ? 'active' : ''}`}
+                                    onClick={() => { setSelectedBook(book); }}
+                                >
+                                    <span className="book-pill-icon">{isSelected ? '📖' : '📕'}</span>
+                                    <span className="book-pill-title">{book}</span>
+                                    <span className="book-pill-badge">{count}P</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
+            {/* ページ一覧タブ ＆ ページ送りツールバー (要件①: 次のページへの移り方・ページ送り) */}
+            <div className="notebook-page-strip-container glass">
+                <div className="page-strip-nav">
                     <button
                         className="btn btn-sm btn-secondary page-arrow-btn"
                         onClick={handlePrevPage}
@@ -302,15 +401,32 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                         <ChevronLeft size={16} /> 前へ
                     </button>
 
-                    <div className="page-indicator">
-                        {filteredNotes.length > 0 ? (
-                            <span>
-                                <strong>{activeIndex + 1}</strong> / {filteredNotes.length} ページ
-                                {searchQuery && <small style={{ marginLeft: '6px', color: '#6366f1' }}>(検索中)</small>}
-                            </span>
+                    {/* クリックで直接ジャンプできるページチップ一覧 */}
+                    <div className="page-strip-pills">
+                        {filteredNotes.length === 0 ? (
+                            <span className="page-strip-empty">ページがありません</span>
                         ) : (
-                            <span>0 / 0 ページ</span>
+                            filteredNotes.map((n, idx) => (
+                                <button
+                                    key={n.id}
+                                    type="button"
+                                    className={`page-chip ${activeNoteId === n.id ? 'active' : ''}`}
+                                    onClick={() => setActiveNoteId(n.id)}
+                                    title={`P.${idx + 1}: ${n.title || '(無題)'}`}
+                                >
+                                    <span className="chip-pnum">P.{idx + 1}</span>
+                                    <span className="chip-title">{n.title || `ページ ${idx + 1}`}</span>
+                                </button>
+                            ))
                         )}
+                        <button
+                            type="button"
+                            className="page-chip add-page-chip"
+                            onClick={handleCreatePage}
+                            title="この本に次のページを追加"
+                        >
+                            <Plus size={13} /> ＋ 次のページを追加
+                        </button>
                     </div>
 
                     <button
@@ -320,27 +436,6 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                         title="次のページへ"
                     >
                         次へ <ChevronRight size={16} />
-                    </button>
-                </div>
-
-                <div className="page-actions-controls">
-                    {/* クイックページ切り替えドロップダウン */}
-                    {filteredNotes.length > 0 && (
-                        <select
-                            className="page-select-dropdown"
-                            value={activeNoteId || ''}
-                            onChange={e => setActiveNoteId(e.target.value)}
-                        >
-                            {filteredNotes.map((n, idx) => (
-                                <option key={n.id} value={n.id}>
-                                    P.{idx + 1} : {n.date} - {n.title || '(無題)'}
-                                </option>
-                            ))}
-                        </select>
-                    )}
-
-                    <button className="btn btn-sm btn-primary add-page-btn" onClick={handleCreatePage}>
-                        <Plus size={15} /> 新しいページを追加
                     </button>
                 </div>
             </div>
@@ -353,9 +448,9 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                         style={{
                             backgroundColor: currentPaper.color,
                             color: currentPaper.textColor,
-                            // ルーズリーフ風罫線
-                            backgroundImage: `repeating-linear-gradient(transparent, transparent 31px, ${currentPaper.lineColor} 31px, ${currentPaper.lineColor} 32px)`
-                        }}
+                            // 下線用カラー変数を定義 (本文エリアのみで整列線を描画)
+                            '--paper-line-color': currentPaper.lineColor
+                        } as React.CSSProperties}
                     >
                         {/* シート上部: 用紙メタ情報・保護ロックバー */}
                         <div className="sheet-header-bar">
@@ -375,9 +470,13 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                                         )}
                                     </div>
                                 ) : (
-                                    <div className="sheet-date-badge" onClick={() => { setAttachDateInput(activeNote.date); setShowDateModal(true); }} style={{ cursor: 'pointer' }}>
-                                        <CalendarDays size={14} />
-                                        <span>{activeNote.date ? `連動日: ${activeNote.date}` : '日付を紐付ける'}</span>
+                                    <div className="sheet-date-badge" onClick={() => { setAttachDateInput(activeNote.date || ''); setShowDateModal(true); }} style={{ cursor: 'pointer' }}>
+                                        <BookOpen size={14} />
+                                        <span style={{ fontWeight: 700 }}>{activeNote.bookTitle || selectedBook}</span>
+                                        <span className="sheet-pnum-badge">Page {activeIndex + 1}/{filteredNotes.length}</span>
+                                        <span style={{ fontSize: '0.75rem', opacity: 0.7, marginLeft: '6px' }}>
+                                            {activeNote.date ? `(連動日: ${activeNote.date})` : 'カレンダー紐付け'}
+                                        </span>
                                     </div>
                                 )}
                             </div>
@@ -443,7 +542,7 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                             </div>
                         </div>
 
-                        {/* 保護ロック中のインジケーターメッセージ */}
+                        {/* 保護ロック中の案内メッセージ */}
                         {activeNote.isLocked && (
                             <div className="sheet-locked-notice">
                                 <Lock size={12} />
@@ -486,12 +585,20 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                             </div>
                         )}
 
-                        {/* 本文エリア (横罫線に沿ったタイピング) */}
+                        {/* 本文エリア (要件③: 下線と文字の位置ずれを完全に解消) */}
                         <div className="sheet-body-area">
                             {activeNote.isLocked ? (
                                 <div className="sheet-content-readonly">
                                     {activeNote.content ? (
-                                        renderContentWithLinks(activeNote.content)
+                                        activeNote.content.split('\n').map((line, lIdx) => (
+                                            <div
+                                                key={lIdx}
+                                                className="sheet-ruled-line"
+                                                style={{ borderBottomColor: currentPaper.lineColor }}
+                                            >
+                                                {renderLineContent(line)}
+                                            </div>
+                                        ))
                                     ) : (
                                         <p className="sheet-empty-text">内容がありません。「保護中」を解除してメモを書き始められます。</p>
                                     )}
@@ -508,21 +615,50 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                             )}
                         </div>
 
-                        {/* 用紙フッター */}
-                        <div className="sheet-footer-bar">
-                            <span className="sheet-meta-time">
-                                作成: {new Date(activeNote.createdAt).toLocaleString('ja-JP')}
-                            </span>
-                            <span className="sheet-a4-stamp">A4 FORMAT • CHRONOS NOTEBOOK</span>
+                        {/* 用紙下部: ページめくりフッターバー (要件①: 次のページへの移り方が一目瞭然) */}
+                        <div className="sheet-page-turn-footer">
+                            <button
+                                type="button"
+                                className="btn btn-sm btn-secondary sheet-page-btn"
+                                onClick={handlePrevPage}
+                                disabled={activeIndex <= 0}
+                            >
+                                <ChevronLeft size={16} /> 前のページ (P.{activeIndex})
+                            </button>
+
+                            <div className="sheet-page-center-info">
+                                <strong>Page {activeIndex + 1}</strong> / {filteredNotes.length}
+                                {currentType === 'free' && (
+                                    <span className="sheet-book-tag">📖 {selectedBook}</span>
+                                )}
+                            </div>
+
+                            {activeIndex < filteredNotes.length - 1 ? (
+                                <button
+                                    type="button"
+                                    className="btn btn-sm btn-secondary sheet-page-btn"
+                                    onClick={handleNextPage}
+                                >
+                                    次のページ (P.{activeIndex + 2}) <ChevronRight size={16} />
+                                </button>
+                            ) : (
+                                <button
+                                    type="button"
+                                    className="btn btn-sm btn-primary sheet-page-btn add-next-btn"
+                                    onClick={handleCreatePage}
+                                >
+                                    <Plus size={14} /> ＋ 次のページを追加
+                                </button>
+                            )}
                         </div>
                     </div>
                 ) : (
                     /* ページが1枚もない場合のガイド */
                     <div className="notebook-empty-stage glass">
                         <BookOpen size={48} style={{ opacity: 0.3, marginBottom: '12px' }} />
-                        <h3>{currentType === 'daily' ? '日付ログノートがありません' : '自由帳がありません'}</h3>
+                        <h3>{currentType === 'daily' ? '日付ログノートがありません' : `「${selectedBook}」にページがありません`}</h3>
                         <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '16px' }}>
-                            「新しいページを追加」ボタンから最初の1ページを作成してメモや議事録を書き始めましょう。
+                            「次のページを追加」ボタンから最初の1ページを作成してメモや議事録を書き始めましょう。
                         </p>
                         <button className="btn btn-primary" onClick={handleCreatePage}>
                             <Plus size={16} /> 最初のページを作成
@@ -530,6 +666,41 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                     </div>
                 )}
             </div>
+
+            {/* 新しいノート冊子(本)の作成モーダル */}
+            {showNewBookModal && (
+                <div className="modal-backdrop" onClick={() => setShowNewBookModal(false)}>
+                    <div className="modal-container glass" onClick={e => e.stopPropagation()} style={{ maxWidth: '420px' }}>
+                        <div className="modal-header">
+                            <h3><BookOpen size={18} /> 新しいノート（冊）を作成</h3>
+                            <button className="btn-close" onClick={() => setShowNewBookModal(false)}><X size={16} /></button>
+                        </div>
+                        <div className="modal-body" style={{ padding: '16px' }}>
+                            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted, #94a3b8)', marginBottom: '12px' }}>
+                                用途やテーマごとに新しいノート冊子を作成します。<br />
+                                （例: 企画アイデア帳、業務マニュアル、読書メモ、議事録など）
+                            </p>
+                            <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: '6px' }}>
+                                ノートの名前（冊名）:
+                            </label>
+                            <input
+                                type="text"
+                                className="form-input"
+                                placeholder="例: 企画アイデアノート"
+                                value={newBookTitleInput}
+                                onChange={e => setNewBookTitleInput(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter') handleConfirmCreateNewBook(); }}
+                                autoFocus
+                                style={{ width: '100%', marginBottom: '16px' }}
+                            />
+                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                <button className="btn btn-secondary btn-sm" onClick={() => setShowNewBookModal(false)}>キャンセル</button>
+                                <button className="btn btn-primary btn-sm" onClick={handleConfirmCreateNewBook}>作成して開く</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* 自由帳の日付紐付けモーダル */}
             {showDateModal && (
@@ -541,7 +712,7 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                         </div>
                         <div className="modal-body" style={{ padding: '16px' }}>
                             <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '12px' }}>
-                                このノートをカレンダーの特定の日付に紐付けます。カレンダー側からも開けるようになります。
+                                このノートページをカレンダーの特定の日付に紐付けます。カレンダー側からも開けるようになります。
                             </p>
                             <input
                                 type="date"
