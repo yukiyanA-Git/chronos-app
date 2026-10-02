@@ -37,15 +37,34 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
         return (saved === 'free' || saved === 'daily') ? saved : 'daily';
     });
 
-    // 自由帳のノート冊子(本)リスト
+    // 自由帳のノート冊子(本)の並び順状態
+    const [freeBooksOrder, setFreeBooksOrder] = useState<string[]>(() => {
+        try {
+            const saved = localStorage.getItem('chronos_notebook_books_order');
+            return saved ? JSON.parse(saved) : [];
+        } catch {
+            return [];
+        }
+    });
+
+    // 自由帳のノート冊子(本)リスト (並び替え対応)
     const freeBooks = useMemo(() => {
-        const set = new Set<string>();
+        const allBookTitles = new Set<string>();
         notes.filter(n => n.type === 'free').forEach(n => {
-            set.add(n.bookTitle || '自由帳 (メイン)');
+            allBookTitles.add(n.bookTitle || '自由帳 (メイン)');
         });
-        if (set.size === 0) set.add('自由帳 (メイン)');
-        return Array.from(set);
-    }, [notes]);
+        if (allBookTitles.size === 0) allBookTitles.add('自由帳 (メイン)');
+
+        const result: string[] = [];
+        freeBooksOrder.forEach(title => {
+            if (allBookTitles.has(title)) {
+                result.push(title);
+                allBookTitles.delete(title);
+            }
+        });
+        allBookTitles.forEach(title => result.push(title));
+        return result;
+    }, [notes, freeBooksOrder]);
 
     // 選択中のノート冊子(本)名 - 直前の選択を記憶
     const [selectedBook, setSelectedBook] = useState<string>(() => {
@@ -281,6 +300,77 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
         }
     };
 
+    // 自由帳: ページの順番入れ替え (前へ / 後ろへ)
+    const handleMovePage = (direction: 'prev' | 'next') => {
+        if (!activeNote || currentType !== 'free') return;
+        const currIdx = filteredNotes.findIndex(n => n.id === activeNote.id);
+        if (currIdx === -1) return;
+        const targetIdx = direction === 'prev' ? currIdx - 1 : currIdx + 1;
+        if (targetIdx < 0 || targetIdx >= filteredNotes.length) return;
+
+        const newNotes = [...filteredNotes];
+        const temp = newNotes[currIdx];
+        newNotes[currIdx] = newNotes[targetIdx];
+        newNotes[targetIdx] = temp;
+
+        newNotes.forEach((n, idx) => {
+            updateNotebookNote(n.id, { pageNumber: idx + 1 });
+        });
+    };
+
+    // 自由帳: 冊子(本)の並び順入れ替え (左へ / 右へ)
+    const handleMoveBook = (direction: 'left' | 'right') => {
+        const currIdx = freeBooks.indexOf(selectedBook);
+        if (currIdx === -1) return;
+        const targetIdx = direction === 'left' ? currIdx - 1 : currIdx + 1;
+        if (targetIdx < 0 || targetIdx >= freeBooks.length) return;
+
+        const newBooks = [...freeBooks];
+        const temp = newBooks[currIdx];
+        newBooks[currIdx] = newBooks[targetIdx];
+        newBooks[targetIdx] = temp;
+
+        setFreeBooksOrder(newBooks);
+        localStorage.setItem('chronos_notebook_books_order', JSON.stringify(newBooks));
+    };
+
+    // モード切替: 日付ログへ（本日が優先、なければ直近）
+    const handleSwitchToDaily = () => {
+        setCurrentType('daily');
+        setSearchQuery('');
+        const todayStr = new Date().toLocaleDateString('sv-SE');
+        const todayNote = notes.find(n => (n.type || 'daily') === 'daily' && n.date === todayStr);
+        if (todayNote) {
+            setActiveNoteId(todayNote.id);
+        } else {
+            const sortedDaily = notes
+                .filter(n => (n.type || 'daily') === 'daily')
+                .sort((a, b) => b.date.localeCompare(a.date) || a.createdAt.localeCompare(b.createdAt));
+            if (sortedDaily.length > 0) {
+                setActiveNoteId(sortedDaily[0].id);
+            }
+        }
+    };
+
+    // モード切替: 自由帳へ
+    const handleSwitchToFree = () => {
+        setCurrentType('free');
+        setSearchQuery('');
+        const bookNotes = notes
+            .filter(n => n.type === 'free' && (n.bookTitle || '自由帳 (メイン)') === selectedBook)
+            .sort((a, b) => {
+                if (a.pageNumber !== undefined && b.pageNumber !== undefined) {
+                    return a.pageNumber - b.pageNumber;
+                }
+                return a.createdAt.localeCompare(b.createdAt);
+            });
+        if (bookNotes.length > 0) {
+            const savedId = localStorage.getItem('chronos_last_notebook_note_id');
+            const matched = bookNotes.find(n => n.id === savedId);
+            setActiveNoteId(matched ? matched.id : bookNotes[0].id);
+        }
+    };
+
     // ロック切り替え (閲覧モード ⇄ 編集モード)
     const handleToggleLock = () => {
         if (!activeNote) return;
@@ -386,14 +476,14 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                 <div className="notebook-mode-tabs">
                     <button
                         className={`notebook-mode-btn ${currentType === 'daily' ? 'active' : ''}`}
-                        onClick={() => { setCurrentType('daily'); setSearchQuery(''); }}
-                        title="日付順に時系列で綴る業務日誌・タイムラインログ"
+                        onClick={handleSwitchToDaily}
+                        title="日付順に時系列で綴る業務日誌・タイムラインログ (本日優先)"
                     >
                         <CalendarIcon size={15} /> 日付ログ (タイムライン)
                     </button>
                     <button
                         className={`notebook-mode-btn ${currentType === 'free' ? 'active' : ''}`}
-                        onClick={() => { setCurrentType('free'); setSearchQuery(''); }}
+                        onClick={handleSwitchToFree}
                         title="テーマやタイトルごとに自由にまとめる思考ノート (冊数管理)"
                     >
                         <FileText size={15} /> 自由帳 (ノート冊子別)
@@ -418,21 +508,47 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                 </div>
             </header>
 
-            {/* 自由帳モード時: 本(冊)の選択シェルフ (要件②: 冊数と見たい本・書きたい本の選び方) */}
+            {/* 自由帳モード時: 本(冊)の選択シェルフ (要件②: 冊数と見たい本・書きたい本の選び方 & 順番入替) */}
             {currentType === 'free' && (
                 <div className="notebook-bookshelf-bar glass">
                     <div className="bookshelf-header">
                         <span className="bookshelf-label">
                             <Bookmark size={15} /> <strong>ノート冊子 (本) を選択:</strong>
                         </span>
-                        <button
-                            type="button"
-                            className="btn btn-sm btn-outline-primary add-book-btn"
-                            onClick={() => { setNewBookTitleInput(''); setShowNewBookModal(true); }}
-                            title="新しいノート(冊)を追加"
-                        >
-                            <Plus size={14} /> ＋ 新しいノート(冊)を作成
-                        </button>
+                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginLeft: 'auto', flexWrap: 'wrap' }}>
+                            {freeBooks.length > 1 && (
+                                <div style={{ display: 'flex', gap: '4px', alignItems: 'center', marginRight: '4px' }}>
+                                    <button
+                                        type="button"
+                                        className="btn btn-sm btn-secondary"
+                                        onClick={() => handleMoveBook('left')}
+                                        disabled={freeBooks.indexOf(selectedBook) <= 0}
+                                        title="選択中の本を左へ並び替え"
+                                        style={{ padding: '3px 8px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '2px' }}
+                                    >
+                                        <ChevronLeft size={13} /> 本を左へ
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="btn btn-sm btn-secondary"
+                                        onClick={() => handleMoveBook('right')}
+                                        disabled={freeBooks.indexOf(selectedBook) >= freeBooks.length - 1}
+                                        title="選択中の本を右へ並び替え"
+                                        style={{ padding: '3px 8px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '2px' }}
+                                    >
+                                        本を右へ <ChevronRight size={13} />
+                                    </button>
+                                </div>
+                            )}
+                            <button
+                                type="button"
+                                className="btn btn-sm btn-outline-primary add-book-btn"
+                                onClick={() => { setNewBookTitleInput(''); setShowNewBookModal(true); }}
+                                title="新しいノート(冊)を追加"
+                            >
+                                <Plus size={14} /> ＋ 新しいノート(冊)を作成
+                            </button>
+                        </div>
                     </div>
                     <div className="bookshelf-tabs-row">
                         {freeBooks.map(book => {
@@ -521,6 +637,33 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                     >
                         次へ <ChevronRight size={16} />
                     </button>
+
+                    {/* 自由帳: ページの並び替え (前へ / 後ろへ) */}
+                    {currentType === 'free' && filteredNotes.length > 1 && (
+                        <div className="page-reorder-nav-group" style={{ display: 'flex', gap: '4px', alignItems: 'center', marginLeft: '6px', borderLeft: '1px solid rgba(255,255,255,0.15)', paddingLeft: '8px' }}>
+                            <span style={{ fontSize: '0.72rem', opacity: 0.75, whiteSpace: 'nowrap' }}>順序入替:</span>
+                            <button
+                                type="button"
+                                className="btn btn-sm btn-secondary"
+                                onClick={() => handleMovePage('prev')}
+                                disabled={activeIndex <= 0}
+                                title="このページを1つ前へ入れ替え"
+                                style={{ padding: '2px 7px', fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: '2px', whiteSpace: 'nowrap' }}
+                            >
+                                <ChevronLeft size={12} /> 前へ入替
+                            </button>
+                            <button
+                                type="button"
+                                className="btn btn-sm btn-secondary"
+                                onClick={() => handleMovePage('next')}
+                                disabled={activeIndex >= filteredNotes.length - 1}
+                                title="このページを1つ後へ入れ替え"
+                                style={{ padding: '2px 7px', fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: '2px', whiteSpace: 'nowrap' }}
+                            >
+                                後へ入替 <ChevronRight size={12} />
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -741,7 +884,33 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                             <div className="sheet-page-center-info">
                                 <strong>Page {activeIndex + 1}</strong> / {filteredNotes.length}
                                 {currentType === 'free' ? (
-                                    <span className="sheet-book-tag">📖 {selectedBook}</span>
+                                    <>
+                                        <span className="sheet-book-tag">📖 {selectedBook}</span>
+                                        {filteredNotes.length > 1 && (
+                                            <span style={{ display: 'inline-flex', gap: '3px', marginLeft: '6px' }}>
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-sm btn-secondary"
+                                                    onClick={() => handleMovePage('prev')}
+                                                    disabled={activeIndex <= 0}
+                                                    title="このページを前に移動"
+                                                    style={{ padding: '1px 6px', fontSize: '0.7rem' }}
+                                                >
+                                                    ◀ 順序前へ
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-sm btn-secondary"
+                                                    onClick={() => handleMovePage('next')}
+                                                    disabled={activeIndex >= filteredNotes.length - 1}
+                                                    title="このページを後に移動"
+                                                    style={{ padding: '1px 6px', fontSize: '0.7rem' }}
+                                                >
+                                                    順序後へ ▶
+                                                </button>
+                                            </span>
+                                        )}
+                                    </>
                                 ) : (
                                     <span className="sheet-book-tag">🗓️ {activeNote.date}</span>
                                 )}
