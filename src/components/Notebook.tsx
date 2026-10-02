@@ -51,6 +51,10 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
     const [showNewBookModal, setShowNewBookModal] = useState(false);
     const [newBookTitleInput, setNewBookTitleInput] = useState('');
 
+    // 過去・指定日付での新規ページ作成ダイアログ
+    const [showCustomDateModal, setShowCustomDateModal] = useState(false);
+    const [customDateInput, setCustomDateInput] = useState(() => new Date().toLocaleDateString('sv-SE'));
+
     // 検索キーワード
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -92,7 +96,7 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
             return true;
         }).sort((a, b) => {
             if (currentType === 'daily') {
-                // 日付順（新しい日付順、同日内は作成順）
+                // 日付順（新しい日付順、同日内は作成日昇順）
                 return b.date.localeCompare(a.date) || a.createdAt.localeCompare(b.createdAt);
             } else {
                 // 自由帳: ページ番号順 (作成日時昇順)
@@ -119,7 +123,7 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                     type: 'daily',
                     date: targetNotebookDate,
                     color: '#ffffff',
-                    isLocked: false
+                    isLocked: false // 新規時はすぐに書けるようロック解除
                 });
                 setActiveNoteId(newId);
             }
@@ -163,7 +167,7 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
         setActiveNoteId(newId);
     };
 
-    // 新規ページ作成 (次のページを追加)
+    // 新規ページ作成 (今日のページ、または自由帳の次のページを追加)
     const handleCreatePage = () => {
         const todayStr = new Date().toLocaleDateString('sv-SE');
         let newTitle = '';
@@ -200,6 +204,44 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
             });
             setActiveNoteId(newId);
         }
+    };
+
+    // 過去日付・指定日付での新規ページ作成
+    const handleCreatePageWithDate = (targetDate: string) => {
+        if (!targetDate) return;
+        const sameDayNotes = notes.filter(n => n.type === 'daily' && n.date === targetDate);
+        const newTitle = sameDayNotes.length > 0
+            ? `${targetDate} デイリーログ (#${sameDayNotes.length + 1})`
+            : `${targetDate} デイリーログ`;
+
+        const newId = addNotebookNote({
+            title: newTitle,
+            content: '',
+            type: 'daily',
+            date: targetDate,
+            color: activeNote?.color || '#ffffff',
+            isLocked: false
+        });
+        setActiveNoteId(newId);
+        setShowCustomDateModal(false);
+    };
+
+    // 既存ノートの日付変更 (連動処理: タイムライン自動挿入・再整列、カレンダー連動、タイトル調整)
+    const handleDateChange = (newDate: string) => {
+        if (!activeNote || !newDate || newDate === activeNote.date) return;
+        const oldDate = activeNote.date;
+        let newTitle = activeNote.title;
+
+        // 日付ログでタイトルに旧日付が含まれている場合、新日付に更新
+        if (activeNote.type === 'daily' && (!activeNote.title || activeNote.title.includes(oldDate))) {
+            const otherNotesOnNewDate = notes.filter(n => n.id !== activeNote.id && n.type === 'daily' && n.date === newDate);
+            if (otherNotesOnNewDate.length > 0) {
+                newTitle = `${newDate} デイリーログ (#${otherNotesOnNewDate.length + 1})`;
+            } else {
+                newTitle = `${newDate} デイリーログ`;
+            }
+        }
+        updateNotebookNote(activeNote.id, { date: newDate, title: newTitle });
     };
 
     // ページ送り (前へ / 次へ)
@@ -412,10 +454,15 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                                     type="button"
                                     className={`page-chip ${activeNoteId === n.id ? 'active' : ''}`}
                                     onClick={() => setActiveNoteId(n.id)}
-                                    title={`P.${idx + 1}: ${n.title || '(無題)'}`}
+                                    title={`P.${idx + 1}: ${n.date} - ${n.title || '(無題)'}`}
                                 >
                                     <span className="chip-pnum">P.{idx + 1}</span>
-                                    <span className="chip-title">{n.title || `ページ ${idx + 1}`}</span>
+                                    <span className="chip-title">
+                                        {currentType === 'daily'
+                                            ? `${n.date}${n.title && n.title.includes('(#') ? ` ${n.title.slice(n.title.indexOf('(#'))}` : ''}`
+                                            : (n.title || `ページ ${idx + 1}`)
+                                        }
+                                    </span>
                                 </button>
                             ))
                         )}
@@ -423,10 +470,23 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                             type="button"
                             className="page-chip add-page-chip"
                             onClick={handleCreatePage}
-                            title="この本に次のページを追加"
+                            title={currentType === 'daily' ? "本日の新しいページを追加" : "この本に次のページを追加"}
                         >
-                            <Plus size={13} /> ＋ 次のページを追加
+                            <Plus size={13} /> {currentType === 'daily' ? '＋ 今日のページ' : '＋ 次のページを追加'}
                         </button>
+                        {currentType === 'daily' && (
+                            <button
+                                type="button"
+                                className="page-chip add-date-page-chip"
+                                onClick={() => {
+                                    setCustomDateInput(new Date().toLocaleDateString('sv-SE'));
+                                    setShowCustomDateModal(true);
+                                }}
+                                title="過去の日付や指定日を選んでノートを作成"
+                            >
+                                <CalendarIcon size={12} /> ＋ 日付を指定して作成
+                            </button>
+                        )}
                     </div>
 
                     <button
@@ -456,21 +516,49 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                         <div className="sheet-header-bar">
                             <div className="sheet-header-left">
                                 {currentType === 'daily' ? (
-                                    <div className="sheet-date-badge">
-                                        <CalendarDays size={14} />
-                                        <span>{activeNote.date}</span>
-                                        {onViewChange && (
-                                            <button
-                                                className="jump-to-calendar-btn"
-                                                onClick={() => onViewChange('calendar')}
-                                                title="カレンダーでこの日の予定を確認"
-                                            >
-                                                カレンダーへ ↗
-                                            </button>
-                                        )}
-                                    </div>
+                                    !activeNote.isLocked ? (
+                                        /* 編集可能時は日付ピッカーで直接日付を変更可能 (過去日付変更・連動) */
+                                        <div className="sheet-date-editor-box" title="クリックして日付を変更（カレンダーや時系列順も自動連動します）">
+                                            <CalendarDays size={14} className="sheet-date-icon" />
+                                            <input
+                                                type="date"
+                                                className="sheet-date-picker-input"
+                                                value={activeNote.date}
+                                                onChange={e => handleDateChange(e.target.value)}
+                                            />
+                                            <span className="sheet-date-hint">日付変更可</span>
+                                            {onViewChange && (
+                                                <button
+                                                    className="jump-to-calendar-btn"
+                                                    onClick={() => onViewChange('calendar')}
+                                                    title="カレンダーでこの日の予定を確認"
+                                                >
+                                                    カレンダーへ ↗
+                                                </button>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div className="sheet-date-badge">
+                                            <CalendarDays size={14} />
+                                            <span>{activeNote.date}</span>
+                                            {onViewChange && (
+                                                <button
+                                                    className="jump-to-calendar-btn"
+                                                    onClick={() => onViewChange('calendar')}
+                                                    title="カレンダーでこの日の予定を確認"
+                                                >
+                                                    カレンダーへ ↗
+                                                </button>
+                                            )}
+                                        </div>
+                                    )
                                 ) : (
-                                    <div className="sheet-date-badge" onClick={() => { setAttachDateInput(activeNote.date || ''); setShowDateModal(true); }} style={{ cursor: 'pointer' }}>
+                                    <div
+                                        className="sheet-date-badge"
+                                        onClick={() => { setAttachDateInput(activeNote.date || ''); setShowDateModal(true); }}
+                                        style={{ cursor: 'pointer' }}
+                                        title="クリックしてカレンダー連動日を設定・変更"
+                                    >
                                         <BookOpen size={14} />
                                         <span style={{ fontWeight: 700 }}>{activeNote.bookTitle || selectedBook}</span>
                                         <span className="sheet-pnum-badge">Page {activeIndex + 1}/{filteredNotes.length}</span>
@@ -546,7 +634,7 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                         {activeNote.isLocked && (
                             <div className="sheet-locked-notice">
                                 <Lock size={12} />
-                                <span>誤操作・誤消去を防ぐため閲覧モードになっています。内容を編集する場合は右上の「保護中」ボタンを押してロックを解除してください。</span>
+                                <span>誤操作・誤消去を防ぐため閲覧モードになっています。内容や日付を編集する場合は右上の「保護中」ボタンを押してロックを解除してください。</span>
                             </div>
                         )}
 
@@ -628,28 +716,45 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
 
                             <div className="sheet-page-center-info">
                                 <strong>Page {activeIndex + 1}</strong> / {filteredNotes.length}
-                                {currentType === 'free' && (
+                                {currentType === 'free' ? (
                                     <span className="sheet-book-tag">📖 {selectedBook}</span>
+                                ) : (
+                                    <span className="sheet-book-tag">🗓️ {activeNote.date}</span>
                                 )}
                             </div>
 
-                            {activeIndex < filteredNotes.length - 1 ? (
-                                <button
-                                    type="button"
-                                    className="btn btn-sm btn-secondary sheet-page-btn"
-                                    onClick={handleNextPage}
-                                >
-                                    次のページ (P.{activeIndex + 2}) <ChevronRight size={16} />
-                                </button>
-                            ) : (
-                                <button
-                                    type="button"
-                                    className="btn btn-sm btn-primary sheet-page-btn add-next-btn"
-                                    onClick={handleCreatePage}
-                                >
-                                    <Plus size={14} /> ＋ 次のページを追加
-                                </button>
-                            )}
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                                {activeIndex < filteredNotes.length - 1 ? (
+                                    <button
+                                        type="button"
+                                        className="btn btn-sm btn-secondary sheet-page-btn"
+                                        onClick={handleNextPage}
+                                    >
+                                        次のページ (P.{activeIndex + 2}) <ChevronRight size={16} />
+                                    </button>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        className="btn btn-sm btn-primary sheet-page-btn add-next-btn"
+                                        onClick={handleCreatePage}
+                                    >
+                                        <Plus size={14} /> ＋ 次のページを追加
+                                    </button>
+                                )}
+                                {currentType === 'daily' && (
+                                    <button
+                                        type="button"
+                                        className="btn btn-sm btn-secondary sheet-page-btn"
+                                        onClick={() => {
+                                            setCustomDateInput(new Date().toLocaleDateString('sv-SE'));
+                                            setShowCustomDateModal(true);
+                                        }}
+                                        title="過去の日付や指定日を選んでノートを作成"
+                                    >
+                                        <CalendarIcon size={13} /> ＋ 日付指定作成
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     </div>
                 ) : (
@@ -660,9 +765,22 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                         <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '16px' }}>
                             「次のページを追加」ボタンから最初の1ページを作成してメモや議事録を書き始めましょう。
                         </p>
-                        <button className="btn btn-primary" onClick={handleCreatePage}>
-                            <Plus size={16} /> 最初のページを作成
-                        </button>
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                            <button className="btn btn-primary" onClick={handleCreatePage}>
+                                <Plus size={16} /> 最初のページを作成
+                            </button>
+                            {currentType === 'daily' && (
+                                <button
+                                    className="btn btn-secondary"
+                                    onClick={() => {
+                                        setCustomDateInput(new Date().toLocaleDateString('sv-SE'));
+                                        setShowCustomDateModal(true);
+                                    }}
+                                >
+                                    <CalendarIcon size={16} /> 日付を指定して作成
+                                </button>
+                            )}
+                        </div>
                     </div>
                 )}
             </div>
@@ -702,6 +820,93 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                 </div>
             )}
 
+            {/* 過去日付・指定日付でのノート作成モーダル */}
+            {showCustomDateModal && (
+                <div className="modal-backdrop" onClick={() => setShowCustomDateModal(false)}>
+                    <div className="modal-container glass" onClick={e => e.stopPropagation()} style={{ maxWidth: '420px' }}>
+                        <div className="modal-header">
+                            <h3><CalendarDays size={18} /> 日付を指定してノートを作成</h3>
+                            <button className="btn-close" onClick={() => setShowCustomDateModal(false)}><X size={16} /></button>
+                        </div>
+                        <div className="modal-body" style={{ padding: '16px' }}>
+                            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted, #94a3b8)', marginBottom: '14px' }}>
+                                過去の付箋メモの転記や、過去の議事録・日誌を過去日付で作成できます。<br />
+                                作成したページは時系列順に自動で既存ページの間へ挿入され、カレンダーにも反映されます。
+                            </p>
+
+                            <div style={{ marginBottom: '12px' }}>
+                                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: '6px' }}>
+                                    ノートの日付:
+                                </label>
+                                <input
+                                    type="date"
+                                    className="form-input"
+                                    value={customDateInput}
+                                    onChange={e => setCustomDateInput(e.target.value)}
+                                    style={{ width: '100%', fontSize: '0.95rem' }}
+                                />
+                            </div>
+
+                            {/* クイック選択ショートカット */}
+                            <div style={{ display: 'flex', gap: '6px', marginBottom: '16px', flexWrap: 'wrap' }}>
+                                <button
+                                    type="button"
+                                    className="btn btn-sm btn-secondary"
+                                    style={{ fontSize: '0.75rem', padding: '2px 8px' }}
+                                    onClick={() => {
+                                        const d = new Date();
+                                        setCustomDateInput(d.toLocaleDateString('sv-SE'));
+                                    }}
+                                >
+                                    今日
+                                </button>
+                                <button
+                                    type="button"
+                                    className="btn btn-sm btn-secondary"
+                                    style={{ fontSize: '0.75rem', padding: '2px 8px' }}
+                                    onClick={() => {
+                                        const d = new Date();
+                                        d.setDate(d.getDate() - 1);
+                                        setCustomDateInput(d.toLocaleDateString('sv-SE'));
+                                    }}
+                                >
+                                    昨日
+                                </button>
+                                <button
+                                    type="button"
+                                    className="btn btn-sm btn-secondary"
+                                    style={{ fontSize: '0.75rem', padding: '2px 8px' }}
+                                    onClick={() => {
+                                        const d = new Date();
+                                        d.setDate(d.getDate() - 2);
+                                        setCustomDateInput(d.toLocaleDateString('sv-SE'));
+                                    }}
+                                >
+                                    2日前
+                                </button>
+                                <button
+                                    type="button"
+                                    className="btn btn-sm btn-secondary"
+                                    style={{ fontSize: '0.75rem', padding: '2px 8px' }}
+                                    onClick={() => {
+                                        const d = new Date();
+                                        d.setDate(d.getDate() - 7);
+                                        setCustomDateInput(d.toLocaleDateString('sv-SE'));
+                                    }}
+                                >
+                                    1週間前
+                                </button>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                <button className="btn btn-secondary btn-sm" onClick={() => setShowCustomDateModal(false)}>キャンセル</button>
+                                <button className="btn btn-primary btn-sm" onClick={() => handleCreatePageWithDate(customDateInput)}>作成して開く</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* 自由帳の日付紐付けモーダル */}
             {showDateModal && (
                 <div className="modal-backdrop" onClick={() => setShowDateModal(false)}>
@@ -721,7 +926,20 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                                 onChange={e => setAttachDateInput(e.target.value)}
                                 style={{ width: '100%', marginBottom: '16px' }}
                             />
-                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                {activeNote?.date && (
+                                    <button
+                                        type="button"
+                                        className="btn btn-secondary btn-sm"
+                                        style={{ marginRight: 'auto', color: '#ef4444' }}
+                                        onClick={() => {
+                                            updateNotebookNote(activeNote.id, { date: '' });
+                                            setShowDateModal(false);
+                                        }}
+                                    >
+                                        連動を解除
+                                    </button>
+                                )}
                                 <button className="btn btn-secondary btn-sm" onClick={() => setShowDateModal(false)}>キャンセル</button>
                                 <button className="btn btn-primary btn-sm" onClick={handleAttachDateSubmit}>設定する</button>
                             </div>

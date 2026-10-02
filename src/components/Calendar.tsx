@@ -37,7 +37,7 @@ export const Calendar: React.FC<CalendarProps> = ({ onDateClick, onEventClick, o
     const {
         data, addStickyToDate, attachStickyToDate, deleteCalendarEvent, addCalendarEvent,
         draftStickyText, draftStickyColor, setDraftStickyText, setDraftStickyColor, clearDraftSticky,
-        setTargetNotebookDate
+        setTargetNotebookDate, addNotebookNote
     } = useApp();
     const [currentDate, setCurrentDate] = useState(() => new Date());
 
@@ -555,18 +555,42 @@ export const Calendar: React.FC<CalendarProps> = ({ onDateClick, onEventClick, o
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                                     <h3 style={{ margin: 0 }}><BookOpen size={16} /> この日のノート ({selectedDateNotes.length}件)</h3>
                                     {onViewChange && selectedDate && (
-                                        <button
-                                            type="button"
-                                            className="btn btn-sm btn-secondary"
-                                            style={{ fontSize: '11px', padding: '3px 8px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                                            onClick={() => {
-                                                setTargetNotebookDate(selectedDate);
-                                                onViewChange('notebook');
-                                            }}
-                                        >
-                                            <span>ノートを開く</span>
-                                            <ExternalLink size={12} />
-                                        </button>
+                                        <div style={{ display: 'flex', gap: '6px' }}>
+                                            <button
+                                                type="button"
+                                                className="btn btn-sm btn-secondary"
+                                                style={{ fontSize: '11px', padding: '3px 8px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                                onClick={() => {
+                                                    setTargetNotebookDate(selectedDate);
+                                                    onViewChange('notebook');
+                                                }}
+                                            >
+                                                <span>ノートを開く</span>
+                                                <ExternalLink size={12} />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className="btn btn-sm btn-secondary"
+                                                style={{ fontSize: '11px', padding: '3px 8px', display: 'inline-flex', alignItems: 'center', gap: '2px', color: 'var(--accent, #6366f1)' }}
+                                                onClick={() => {
+                                                    const count = selectedDateNotes.length;
+                                                    addNotebookNote({
+                                                        title: `${selectedDate} デイリーログ (#${count + 1})`,
+                                                        content: '',
+                                                        type: 'daily',
+                                                        date: selectedDate,
+                                                        color: '#ffffff',
+                                                        isLocked: false
+                                                    });
+                                                    setTargetNotebookDate(selectedDate);
+                                                    onViewChange('notebook');
+                                                }}
+                                                title="この日付に新しいページを追加"
+                                            >
+                                                <Plus size={11} />
+                                                <span>＋追加</span>
+                                            </button>
+                                        </div>
                                     )}
                                 </div>
                                 {selectedDateNotes.length === 0 ? (
