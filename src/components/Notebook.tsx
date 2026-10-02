@@ -4,7 +4,7 @@ import type { NotebookType } from '../types';
 import {
     BookOpen, Calendar as CalendarIcon, FileText, ChevronLeft, ChevronRight,
     Plus, Lock, Unlock, Search, Trash2, Image, ExternalLink,
-    Printer, CalendarDays, X, Bookmark
+    Printer, CalendarDays, X, Bookmark, Edit3
 } from 'lucide-react';
 
 interface NotebookProps {
@@ -48,10 +48,24 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
         }
     });
 
-    // 自由ノートのタイトルの標準化 (旧「自由帳 (メイン)」からの移行)
+    // ノート（冊）名の標準化 (旧「自由 (メイン)」「自由帳 (メイン)」「自由ノート (メイン)」を「無題」に移行)
     const normalizeBookTitle = (title?: string) => {
-        if (!title || title === '自由帳 (メイン)') return '自由ノート (メイン)';
+        if (!title || title === '自由帳 (メイン)' || title === '自由 (メイン)' || title === '自由ノート (メイン)') {
+            return '無題';
+        }
         return title;
+    };
+
+    // ページタイトルのクリーンアップ (旧デフォルト「自由 (メイン) - 1ページ」等を「1ページ」等に整える)
+    const cleanLegacyPageTitle = (title: string, pageNum?: number) => {
+        const trimmed = (title || '').trim();
+        if (!trimmed) return pageNum ? `${pageNum}ページ` : '';
+        const legacyPattern = /^(?:自由(?:\s*\(メイン\)|帳\s*\(メイン\)|ノート\s*\(メイン\))?|無題(?:\d+)?)\s*-\s*(\d+ページ)$/;
+        const match = trimmed.match(legacyPattern);
+        if (match) {
+            return match[1];
+        }
+        return trimmed;
     };
 
     // 自由ノートのリスト (並び替え対応)
@@ -60,7 +74,7 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
         notes.filter(n => n.type === 'free').forEach(n => {
             allBookTitles.add(normalizeBookTitle(n.bookTitle));
         });
-        if (allBookTitles.size === 0) allBookTitles.add('自由ノート (メイン)');
+        if (allBookTitles.size === 0) allBookTitles.add('無題');
 
         const result: string[] = [];
         freeBooksOrder.forEach(title => {
@@ -73,6 +87,16 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
         allBookTitles.forEach(title => result.push(title));
         return result;
     }, [notes, freeBooksOrder]);
+
+    // 次の新規ノートのデフォルト名（無題、無題２、無題３...）
+    const nextDefaultBookTitle = useMemo(() => {
+        if (!freeBooks.includes('無題')) return '無題';
+        let num = 2;
+        while (freeBooks.includes(`無題${num}`) || freeBooks.includes(`無題 ${num}`)) {
+            num++;
+        }
+        return `無題${num}`;
+    }, [freeBooks]);
 
     // ノート作成上限（10冊）到達判定 (無料プラン時10冊、プレミアム時は無制限)
     const isBookLimitReached = !isPremium && freeBooks.length >= MAX_FREE_BOOKS;
@@ -87,7 +111,11 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
     const [showNewBookModal, setShowNewBookModal] = useState(false);
     const [newBookTitleInput, setNewBookTitleInput] = useState('');
 
-    // 自由帳の上限案内・プレミアム案内モーダル
+    // ノート名変更ダイアログ
+    const [showRenameBookModal, setShowRenameBookModal] = useState(false);
+    const [renameBookInput, setRenameBookInput] = useState('');
+
+    // ノート作成上限案内・プレミアム案内モーダル
     const [showBookLimitModal, setShowBookLimitModal] = useState(false);
 
     // 過去・指定日付での新規ページ作成ダイアログ
@@ -203,22 +231,22 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
     const activeIndex = filteredNotes.findIndex(n => n.id === activeNoteId);
     const activeNote = filteredNotes.find(n => n.id === activeNoteId);
 
-    // 新規ノート冊子(本)の作成
+    // 新規ノートの作成
     const handleConfirmCreateNewBook = () => {
         if (isBookLimitReached) {
             setShowNewBookModal(false);
             setShowBookLimitModal(true);
             return;
         }
-        const title = newBookTitleInput.trim() || `新しいノート ${freeBooks.length + 1}`;
+        const title = newBookTitleInput.trim() || nextDefaultBookTitle;
         setSelectedBook(title);
         setShowNewBookModal(false);
         setNewBookTitleInput('');
 
-        // 作成した冊子の第1ページ目を即座に生成
+        // 作成したノートの第1ページ目を即座に生成
         const todayStr = new Date().toLocaleDateString('sv-SE');
         const newId = addNotebookNote({
-            title: `${title} - 1ページ`,
+            title: '1ページ',
             content: '',
             type: 'free',
             bookTitle: title,
@@ -230,7 +258,40 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
         setActiveNoteId(newId);
     };
 
-    // 新規ページ作成 (今日のページ、または自由帳の次のページを追加)
+    // 選択中ノートの名前変更
+    const handleOpenRenameBook = () => {
+        setRenameBookInput(selectedBook);
+        setShowRenameBookModal(true);
+    };
+
+    const handleConfirmRenameBook = () => {
+        const newTitle = renameBookInput.trim();
+        if (!newTitle || newTitle === selectedBook) {
+            setShowRenameBookModal(false);
+            return;
+        }
+        if (freeBooks.includes(newTitle)) {
+            alert(`「${newTitle}」という名前のノートは既に存在します。別の名前を入力してください。`);
+            return;
+        }
+
+        // このノートに属する全ページのbookTitleを一括更新
+        notes.filter(n => n.type === 'free' && normalizeBookTitle(n.bookTitle) === selectedBook).forEach(n => {
+            updateNotebookNote(n.id, { bookTitle: newTitle });
+        });
+
+        // 並び順リストの更新
+        const newOrder = freeBooksOrder.map(b => normalizeBookTitle(b) === selectedBook ? newTitle : b);
+        if (!newOrder.includes(newTitle)) newOrder.push(newTitle);
+        setFreeBooksOrder(newOrder);
+        localStorage.setItem('chronos_notebook_books_order', JSON.stringify(newOrder));
+
+        setSelectedBook(newTitle);
+        localStorage.setItem('chronos_last_notebook_book', newTitle);
+        setShowRenameBookModal(false);
+    };
+
+    // 新規ページ作成 (今日のページ、または次のページを追加)
     const handleCreatePage = () => {
         const todayStr = new Date().toLocaleDateString('sv-SE');
         let newTitle = '';
@@ -253,7 +314,7 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
             // 自由ノート: 現在選択中のノートの末尾に次のページを追加
             const currentBookNotes = notes.filter(n => n.type === 'free' && normalizeBookTitle(n.bookTitle) === selectedBook);
             const nextPageNum = currentBookNotes.length + 1;
-            newTitle = `${selectedBook} - ${nextPageNum}ページ`;
+            newTitle = `${nextPageNum}ページ`;
 
             const newId = addNotebookNote({
                 title: newTitle,
@@ -547,6 +608,15 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                             </span>
                         </span>
                         <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginLeft: 'auto', flexWrap: 'wrap' }}>
+                            <button
+                                type="button"
+                                className="btn btn-sm btn-secondary"
+                                onClick={handleOpenRenameBook}
+                                title="選択中のノートの名前を変更"
+                                style={{ padding: '3px 9px', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                            >
+                                <Edit3 size={13} /> 名前変更
+                            </button>
                             {freeBooks.length > 1 && (
                                 <div style={{ display: 'flex', gap: '4px', alignItems: 'center', marginRight: '4px' }}>
                                     <button
@@ -598,6 +668,8 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                                     type="button"
                                     className={`book-pill-tab ${isSelected ? 'active' : ''}`}
                                     onClick={() => { setSelectedBook(book); }}
+                                    onDoubleClick={handleOpenRenameBook}
+                                    title={isSelected ? "ダブルクリックまたは「名前変更」でノート名を編集" : `「${book}」に切り替え`}
                                 >
                                     <span className="book-pill-icon">{isSelected ? '📖' : '📕'}</span>
                                     <span className="book-pill-title">{book}</span>
@@ -632,13 +704,13 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                                     type="button"
                                     className={`page-chip ${activeNoteId === n.id ? 'active' : ''}`}
                                     onClick={() => setActiveNoteId(n.id)}
-                                    title={`P.${idx + 1}: ${n.date} - ${n.title || '(無題)'}`}
+                                    title={`P.${idx + 1}: ${n.date} - ${cleanLegacyPageTitle(n.title, idx + 1) || '(タイトルなし)'}`}
                                 >
                                     <span className="chip-pnum">P.{idx + 1}</span>
                                     <span className="chip-title">
                                         {currentType === 'daily'
                                             ? `${n.date}${n.title && n.title.includes('(#') ? ` ${n.title.slice(n.title.indexOf('(#'))}` : ''}`
-                                            : (n.title || `ページ ${idx + 1}`)
+                                            : (cleanLegacyPageTitle(n.title, idx + 1) || `${idx + 1}ページ`)
                                         }
                                     </span>
                                 </button>
@@ -648,9 +720,9 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                             type="button"
                             className="page-chip add-page-chip"
                             onClick={handleCreatePage}
-                            title={currentType === 'daily' ? "本日の新しいページを追加" : "この本に次のページを追加"}
+                            title={currentType === 'daily' ? "本日の新しいページを追加" : "このノートに次のページを追加"}
                         >
-                            <Plus size={13} /> {currentType === 'daily' ? '＋ 今日のページ' : '＋ 次のページを追加'}
+                            <Plus size={13} /> {currentType === 'daily' ? '今日のページ' : '次のページを追加'}
                         </button>
                         {currentType === 'daily' && (
                             <button
@@ -662,7 +734,7 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                                 }}
                                 title="過去の日付や指定日を選んでノートを作成"
                             >
-                                <CalendarIcon size={12} /> ＋ 日付を指定して作成
+                                <CalendarIcon size={12} /> 日付を指定して作成
                             </button>
                         )}
                     </div>
@@ -765,7 +837,7 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                                         title="クリックしてカレンダー連動日を設定・変更"
                                     >
                                         <BookOpen size={14} />
-                                        <span style={{ fontWeight: 700 }}>{activeNote.bookTitle || selectedBook}</span>
+                                        <span style={{ fontWeight: 700 }}>{normalizeBookTitle(activeNote.bookTitle || selectedBook)}</span>
                                         <span className="sheet-pnum-badge">Page {activeIndex + 1}/{filteredNotes.length}</span>
                                         <span style={{ fontSize: '0.75rem', opacity: 0.7, marginLeft: '6px' }}>
                                             {activeNote.date ? `(連動日: ${activeNote.date})` : 'カレンダー紐付け'}
@@ -846,14 +918,14 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                         {/* タイトル入力エリア */}
                         <div className="sheet-title-wrapper">
                             {activeNote.isLocked ? (
-                                <h2 className="sheet-title-display">{activeNote.title || '(無題のノート)'}</h2>
+                                <h2 className="sheet-title-display">{cleanLegacyPageTitle(activeNote.title, activeNote.pageNumber) || '(タイトルなし)'}</h2>
                             ) : (
                                 <input
                                     type="text"
                                     className="sheet-title-input"
-                                    value={activeNote.title}
+                                    value={cleanLegacyPageTitle(activeNote.title, activeNote.pageNumber)}
                                     onChange={e => handleTitleChange(e.target.value)}
-                                    placeholder="ノートのタイトルを入力..."
+                                    placeholder="ページのタイトルを入力（例: 企画メモ、議事録）..."
                                 />
                             )}
                         </div>
@@ -969,7 +1041,7 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                                         className="btn btn-sm btn-primary sheet-page-btn add-next-btn"
                                         onClick={handleCreatePage}
                                     >
-                                        <Plus size={14} /> ＋ 次のページを追加
+                                        <Plus size={14} /> 次のページを追加
                                     </button>
                                 )}
                                 {currentType === 'daily' && (
@@ -982,7 +1054,7 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                                         }}
                                         title="過去の日付や指定日を選んでノートを作成"
                                     >
-                                        <CalendarIcon size={13} /> ＋ 日付指定作成
+                                        <CalendarIcon size={13} /> 日付を指定して作成
                                     </button>
                                 )}
                             </div>
@@ -1035,16 +1107,52 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                             <input
                                 type="text"
                                 className="form-input"
-                                placeholder="例: 企画アイデア"
+                                placeholder={`例: ${nextDefaultBookTitle}、企画アイデア、議事録`}
                                 value={newBookTitleInput}
                                 onChange={e => setNewBookTitleInput(e.target.value)}
                                 onKeyDown={e => { if (e.key === 'Enter') handleConfirmCreateNewBook(); }}
                                 autoFocus
-                                style={{ width: '100%', marginBottom: '16px' }}
+                                style={{ width: '100%', marginBottom: '6px' }}
                             />
+                            <p style={{ fontSize: '0.78rem', color: '#94a3b8', marginBottom: '16px' }}>
+                                ※ 未入力の場合は「<strong>{nextDefaultBookTitle}</strong>」になります。
+                            </p>
                             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                                 <button className="btn btn-secondary btn-sm" onClick={() => setShowNewBookModal(false)}>キャンセル</button>
                                 <button className="btn btn-primary btn-sm" onClick={handleConfirmCreateNewBook}>作成して開く</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ノート名変更モーダル */}
+            {showRenameBookModal && (
+                <div className="modal-overlay" onClick={() => setShowRenameBookModal(false)}>
+                    <div className="modal glass" onClick={e => e.stopPropagation()} style={{ maxWidth: '420px' }}>
+                        <div className="modal-header">
+                            <h3><Edit3 size={18} /> ノート名の変更</h3>
+                            <button className="btn-close" onClick={() => setShowRenameBookModal(false)}><X size={16} /></button>
+                        </div>
+                        <div className="modal-body" style={{ padding: '4px 0 0 0' }}>
+                            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted, #94a3b8)', marginBottom: '12px' }}>
+                                ノートの名前を変更します。（例: 企画アイデア、業務マニュアル、議事録など）
+                            </p>
+                            <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: '6px' }}>
+                                新しいノート名:
+                            </label>
+                            <input
+                                type="text"
+                                className="form-input"
+                                value={renameBookInput}
+                                onChange={e => setRenameBookInput(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter') handleConfirmRenameBook(); }}
+                                autoFocus
+                                style={{ width: '100%', marginBottom: '16px' }}
+                            />
+                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                <button className="btn btn-secondary btn-sm" onClick={() => setShowRenameBookModal(false)}>キャンセル</button>
+                                <button className="btn btn-primary btn-sm" onClick={handleConfirmRenameBook}>変更を保存</button>
                             </div>
                         </div>
                     </div>
