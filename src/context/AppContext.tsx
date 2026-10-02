@@ -629,6 +629,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             ...note,
             id,
             isLocked: note.isLocked !== undefined ? note.isLocked : true,
+            bookTitle: note.bookTitle || (note.type === 'free' ? '自由帳 (メイン)' : undefined),
             createdAt: now,
             updatedAt: now
         };

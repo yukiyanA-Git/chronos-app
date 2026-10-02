@@ -4290,37 +4290,57 @@ body {
     cursor: pointer;
 }
 
-/* 本文エリア (32px横罫線にピッタリ同期) */
+/* ============================================================
+   📔 本文エリア & 罫線（下線と文字位置を100%整列）
+   ============================================================ */
 .sheet-body-area {
     flex: 1;
     position: relative;
+    margin-top: 8px;
+    border-left: 2px solid rgba(239, 68, 68, 0.35); /* ノート特有の赤マージン線 */
+    padding-left: 16px;
+    margin-left: 4px;
 }
 
+/* 閲覧モード: 各行が自身のborder-bottomを持つため絶対にズレない */
 .sheet-content-readonly {
-    font-size: 15px;
-    line-height: 32px;
-    min-height: 500px;
-    white-space: pre-wrap;
+    min-height: 480px;
+    font-size: 16px;
+}
+
+.sheet-ruled-line {
+    min-height: 36px;
+    line-height: 36px;
+    font-size: 16px;
+    border-bottom: 1px solid var(--paper-line-color, rgba(59, 130, 246, 0.22));
+    padding: 0 4px;
+    box-sizing: border-box;
     word-break: break-word;
+    white-space: pre-wrap;
 }
 
-.sheet-line {
-    min-height: 32px;
-    line-height: 32px;
-}
-
+/* 編集モード (Textarea): 36px行高に合わせた等間隔グラデーション罫線 */
 .sheet-content-textarea {
     width: 100%;
-    font-size: 15px;
-    line-height: 32px;
+    font-size: 16px;
+    line-height: 36px;
     background: transparent;
     border: none;
     outline: none;
     resize: vertical;
     color: inherit;
     font-family: inherit;
-    padding: 0;
+    padding: 0 4px;
     margin: 0;
+    box-sizing: border-box;
+    background-image: repeating-linear-gradient(
+        transparent,
+        transparent 35px,
+        var(--paper-line-color, rgba(59, 130, 246, 0.22)) 35px,
+        var(--paper-line-color, rgba(59, 130, 246, 0.22)) 36px
+    );
+    background-attachment: local;
+    background-position: 0 0;
 }
 
 .sheet-link {
@@ -4332,8 +4352,9 @@ body {
 .sheet-empty-text {
     font-size: 0.9rem;
     opacity: 0.6;
-    line-height: 32px;
+    line-height: 36px;
     margin: 0;
+    border-bottom: 1px dashed var(--paper-line-color, rgba(59, 130, 246, 0.22));
 }
 
 .sheet-empty-state {
@@ -4345,6 +4366,339 @@ body {
 .sheet-empty-state h3 {
     margin: 12px 0 6px 0;
     color: var(--text-primary);
+}
+
+/* ============================================================
+   📚 自由帳モード: ノート冊子(本)の選択シェルフ (要件②)
+   ============================================================ */
+.notebook-bookshelf-bar {
+    padding: 10px 16px;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    border: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+    background: var(--card-bg, #ffffff);
+}
+
+.bookshelf-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.bookshelf-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: var(--text-primary);
+}
+
+.add-book-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.76rem;
+    padding: 3px 10px;
+    border-radius: 6px;
+    border: 1px dashed var(--accent, #6366f1);
+    color: var(--accent, #6366f1);
+    background: rgba(99, 102, 241, 0.06);
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.15s ease;
+}
+
+.add-book-btn:hover {
+    background: var(--accent, #6366f1);
+    color: #ffffff;
+}
+
+.bookshelf-tabs-row {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+}
+
+.book-pill-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border-color, rgba(0, 0, 0, 0.12));
+    background: rgba(0, 0, 0, 0.03);
+    color: var(--text-primary);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+}
+
+.book-pill-tab:hover {
+    border-color: var(--accent, #6366f1);
+    transform: translateY(-1px);
+}
+
+.book-pill-tab.active {
+    background: var(--accent, #6366f1);
+    color: #ffffff;
+    border-color: var(--accent, #6366f1);
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+}
+
+.book-pill-icon {
+    font-size: 1rem;
+}
+
+.book-pill-title {
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.book-pill-badge {
+    font-size: 0.72rem;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.08);
+}
+
+.book-pill-tab.active .book-pill-badge {
+    background: rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+}
+
+/* ============================================================
+   📑 ページ一覧タブ ＆ ページ送りツールバー (要件①)
+   ============================================================ */
+.notebook-page-strip-container {
+    padding: 8px 14px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    border: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+    background: var(--card-bg, #ffffff);
+}
+
+.page-strip-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.page-strip-pills {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    overflow-x: auto;
+    flex: 1;
+    padding: 2px 4px;
+}
+
+.page-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color, rgba(0, 0, 0, 0.1));
+    background: rgba(0, 0, 0, 0.02);
+    color: var(--text-primary);
+    cursor: pointer;
+    white-space: nowrap;
+    font-size: 0.8rem;
+    transition: all 0.15s ease;
+}
+
+.page-chip:hover {
+    border-color: var(--accent, #6366f1);
+}
+
+.page-chip.active {
+    background: rgba(99, 102, 241, 0.12);
+    border-color: var(--accent, #6366f1);
+    color: var(--accent, #4f46e5);
+    font-weight: 700;
+}
+
+.chip-pnum {
+    font-weight: 700;
+    font-size: 0.76rem;
+    color: var(--accent, #6366f1);
+}
+
+.chip-title {
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.add-page-chip {
+    border: 1px dashed var(--accent, #6366f1);
+    color: var(--accent, #6366f1);
+    background: rgba(99, 102, 241, 0.04);
+    font-weight: 600;
+}
+
+.add-page-chip:hover {
+    background: var(--accent, #6366f1);
+    color: #ffffff;
+}
+
+.page-strip-empty {
+    font-size: 0.8rem;
+    color: var(--text-muted, #94a3b8);
+}
+
+/* 用紙下部のページめくりフッターバー */
+.sheet-page-turn-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 20px;
+    margin-top: 24px;
+    border-top: 1px dashed rgba(0, 0, 0, 0.15);
+    gap: 12px;
+}
+
+.sheet-page-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.sheet-page-center-info {
+    font-size: 0.88rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sheet-book-tag {
+    font-size: 0.76rem;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.06);
+    font-weight: 500;
+}
+
+.sheet-pnum-badge {
+    background: rgba(99, 102, 241, 0.12);
+    color: #4f46e5;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    margin-left: 6px;
+    font-weight: 700;
+}
+
+.add-next-btn {
+    background: var(--accent, #6366f1) !important;
+    color: #ffffff !important;
+}
+
+/* ============================================================
+   📌 ダッシュボード クイック入力切り替え (要件④)
+   ============================================================ */
+.dashboard-quick-input-container {
+    background: var(--card-bg, #ffffff);
+    border-radius: 12px;
+    border: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.dash-input-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.dash-tab-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color, rgba(0, 0, 0, 0.1));
+    background: rgba(0, 0, 0, 0.02);
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.18s ease;
+}
+
+.dash-tab-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.dash-tab-sub {
+    font-size: 0.72rem;
+    color: var(--text-muted, #94a3b8);
+    margin-top: 2px;
+}
+
+.dash-tab-btn.active.sticky-mode {
+    border-color: #f59e0b;
+    background: rgba(245, 158, 11, 0.08);
+}
+
+.dash-tab-btn.active.sticky-mode .dash-tab-title {
+    color: #d97706;
+}
+
+.dash-tab-btn.active.notebook-mode {
+    border-color: #6366f1;
+    background: rgba(99, 102, 241, 0.08);
+}
+
+.dash-tab-btn.active.notebook-mode .dash-tab-title {
+    color: #4f46e5;
+}
+
+.dash-input-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.dash-input-subline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.dash-input-hint {
+    font-size: 0.78rem;
+    color: var(--text-muted, #64748b);
+}
+
+.dash-input-hint.notebook-hint {
+    color: #4f46e5;
+    font-weight: 500;
+}
+
+.btn-notebook-primary {
+    background: #6366f1 !important;
+    color: #ffffff !important;
+    border: none;
+    font-weight: 600;
+}
+
+.btn-notebook-primary:hover {
+    background: #4f46e5 !important;
 }
 
 /* カレンダーセル上のノートバッジ */
@@ -4381,33 +4735,41 @@ body {
         width: 100%;
     }
 
-    .notebook-page-toolbar {
+    .bookshelf-header {
         flex-direction: column;
-        align-items: stretch;
-        padding: 8px 12px;
-    }
-
-    .page-nav-controls {
-        justify-content: space-between;
-        width: 100%;
-    }
-
-    .page-actions-controls {
-        width: 100%;
-        display: flex;
+        align-items: flex-start;
         gap: 6px;
     }
 
-    .page-select-dropdown {
-        flex: 1;
-        max-width: none;
+    .page-strip-nav {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+
+    .page-strip-pills {
+        width: 100%;
+    }
+
+    .dash-input-tabs {
+        flex-direction: column;
+    }
+
+    .sheet-page-turn-footer {
+        flex-direction: column;
+        gap: 10px;
     }
 
     .notebook-sheet-a4 {
-        padding: 24px 18px;
+        padding: 24px 14px;
         border-radius: 8px;
         border-left: 3px solid rgba(239, 68, 68, 0.25);
-        min-height: 650px;
+        min-height: 600px;
+    }
+
+    .sheet-body-area {
+        margin-left: 0;
+        padding-left: 10px;
     }
 
     .sheet-title-display,
@@ -4415,12 +4777,13 @@ body {
         font-size: 1.15rem;
     }
 
-    .sheet-content-readonly,
+    .sheet-ruled-line,
     .sheet-content-textarea {
-        font-size: 14px;
-        line-height: 32px;
+        font-size: 15px;
+        line-height: 34px;
     }
 }
+
 
 
 

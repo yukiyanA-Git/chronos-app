@@ -41,12 +41,8 @@ export const Calendar: React.FC<CalendarProps> = ({ onDateClick, onEventClick, o
     } = useApp();
     const [currentDate, setCurrentDate] = useState(() => new Date());
 
-    // 初期状態で今日を選択
-    const todayFormatted = (() => {
-        const d = new Date();
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    })();
-    const [selectedDate, setSelectedDate] = useState<string | null>(todayFormatted);
+    // 初期状態ではサイドパネルを閉じ、日付タップ時に展開
+    const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
     // 右側パネル内での「新規予定作成」インラインフォーム展開状態
     const [showNewEventForm, setShowNewEventForm] = useState(false);
