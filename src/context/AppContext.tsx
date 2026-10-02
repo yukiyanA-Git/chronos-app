@@ -70,6 +70,8 @@ interface AppContextProps {
     forceUploadToCloud: () => Promise<void>;
     forceFetchFromCloud: () => Promise<void>;
     forceSmartMergeCloud: () => Promise<void>;
+    isPremium: boolean;
+    setIsPremium: (val: boolean) => void;
 }
 
 const DEFAULT_TIMETABLE_NAME = '通常出勤';
@@ -92,7 +94,8 @@ const EMPTY_DATA: AppData = {
     memos: [],
     stickies: [],
     stickyFolders: [],
-    notebookNotes: []
+    notebookNotes: [],
+    isPremium: false
 };
 
 // どんなデータが入っていてもクラッシュさせない安全ガード関数
@@ -108,7 +111,8 @@ const sanitizeData = (raw: any): AppData => {
         memos: Array.isArray(raw.memos) ? raw.memos : [],
         stickies: Array.isArray(raw.stickies) ? raw.stickies : [],
         stickyFolders: Array.isArray(raw.stickyFolders) ? raw.stickyFolders : [],
-        notebookNotes: Array.isArray(raw.notebookNotes) ? raw.notebookNotes : []
+        notebookNotes: Array.isArray(raw.notebookNotes) ? raw.notebookNotes : [],
+        isPremium: typeof raw.isPremium === 'boolean' ? raw.isPremium : false
     };
 };
 
@@ -155,7 +159,8 @@ const mergeAppData = (base: AppData, incoming: AppData): AppData => {
         memos: Array.from(memoMap.values()),
         stickies: Array.from(stickyMap.values()),
         stickyFolders: Array.from(folderMap.values()),
-        notebookNotes: Array.from(notebookMap.values())
+        notebookNotes: Array.from(notebookMap.values()),
+        isPremium: !!(incoming.isPremium || base.isPremium)
     };
 };
 
@@ -849,6 +854,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                                 }
                             }))
                         }
+                    },
+                    isPremium: {
+                        booleanValue: !!clean.isPremium
                     }
                 }
             };
@@ -916,9 +924,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
     };
 
+    // プレミアムプラン（広告非表示・自由帳ノート冊数無制限）切替
+    const setIsPremium = (val: boolean) => {
+        saveData({
+            ...data,
+            isPremium: val
+        });
+    };
+
     return (
         <AppContext.Provider value={{
             data,
+            isPremium: !!data.isPremium,
+            setIsPremium,
             theme,
             bgColor,
             loading: authInitializing,
