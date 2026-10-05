@@ -78,8 +78,17 @@ export const ChronosKnowledgeFooter: React.FC = () => {
                     </div>
 
                     <div style={{ background: 'rgba(255, 255, 255, 0.03)', padding: '1rem', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                        <h4 style={{ margin: '0 0 0.5rem 0', color: '#818cf8', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.88rem' }}>
+                            <BookOpen size={16} /> 3. デジタルノートによる思考整理とナレッジ蓄積
+                        </h4>
+                        <p style={{ margin: 0 }}>
+                            断片的な付箋メモとは異なり、長文の議事録や企画構想、日々の業務日誌を体系的に蓄積する機能です。カレンダーと連動する「日付ノート」と、テーマ・企画ごとに整理できる「自由ノート」を使い分けることで、思考を深め、過去の知見をいつでも検索・再活用できます。
+                        </p>
+                    </div>
+
+                    <div style={{ background: 'rgba(255, 255, 255, 0.03)', padding: '1rem', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
                         <h4 style={{ margin: '0 0 0.5rem 0', color: '#fbbf24', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.88rem' }}>
-                            <Clock size={16} /> 3. 週間定例枠と自動連携
+                            <Clock size={16} /> 4. 週間定例枠と自動連携
                         </h4>
                         <p style={{ margin: 0 }}>
                             毎週発生する定例会議や講義・習慣化したい日課は「タイムテーブル」に登録しておくことで、個別のカレンダーにも自動反映されます。毎週の入力負担を減らし、スケジュールの重複を未然に防ぎます。
@@ -88,7 +97,7 @@ export const ChronosKnowledgeFooter: React.FC = () => {
 
                     <div style={{ background: 'rgba(255, 255, 255, 0.03)', padding: '1rem', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
                         <h4 style={{ margin: '0 0 0.5rem 0', color: '#c084fc', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.88rem' }}>
-                            <Shield size={16} /> 4. データ保護とマルチデバイス同期
+                            <Shield size={16} /> 5. データ保護とマルチデバイス同期
                         </h4>
                         <p style={{ margin: 0 }}>
                             ChronosはPC・スマートフォンの全ブラウザでレスポンシブに動作します。Googleログインによる無料クラウド同期を有効にすることで、外出先のスマホとデスクのPCでリアルタイムにスケジュールが安全に暗号化同期されます。
