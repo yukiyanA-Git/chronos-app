@@ -218,7 +218,7 @@ function App() {
                     >
                         <BookOpen size={18} />
                         <span>ノート</span>
-                        <span style={{ fontSize: '10px', background: 'rgba(99, 102, 241, 0.15)', color: '#6366f1', padding: '1px 5px', borderRadius: '4px', marginLeft: 'auto', fontWeight: 600 }}>Preview</span>
+                        <span style={{ fontSize: '10px', background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', padding: '1px 5px', borderRadius: '4px', marginLeft: 'auto', fontWeight: 600 }}>NEW</span>
                     </button>
                     <button
                         className={`menu-item ${currentView === 'settings' ? 'active' : ''}`}
