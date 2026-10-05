@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, LayoutDashboard, Calendar, StickyNote, Grid, FileSpreadsheet, CheckCircle2 } from 'lucide-react';
+import { X, LayoutDashboard, Calendar, StickyNote, Grid, FileSpreadsheet, CheckCircle2, BookOpen } from 'lucide-react';
 
 interface GuideModalProps {
     onClose: () => void;
@@ -70,6 +70,17 @@ export const GuideModal: React.FC<GuideModalProps> = ({ onClose }) => {
                                 </strong>
                                 <span style={{ fontSize: '0.82rem', opacity: 0.8 }}>
                                     CSV形式の保存、Excel・スプレッドシートへの一発貼り付け用コピー（TSV）、日報メール用の箇条書きテキスト生成をサポート。
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="date-modal-item" style={{ borderLeftColor: '#818cf8', marginBottom: '8px' }}>
+                            <div className="date-modal-item-info">
+                                <strong style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <BookOpen size={16} /> 6. ノート機能（業務日誌・自由ノート）
+                                </strong>
+                                <span style={{ fontSize: '0.82rem', opacity: 0.8 }}>
+                                    毎日の日報や振り返りを記録できる「日付ノート」と、プロジェクト・テーマ別に整理できる「自由ノート」を搭載。カレンダーとの双方向連動や用紙カラー変更、誤消去を防ぐ閲覧ロックに対応しています。
                                 </span>
                             </div>
                         </div>
