@@ -246,18 +246,50 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 unsubscribeFirestore = onSnapshot(userDocRef, { includeMetadataChanges: true }, (snapshot) => {
                     if (snapshot.exists()) {
                         const cloudData = sanitizeData(snapshot.data());
-                        setData(cloudData);
-                        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(cloudData));
+                        // 🔑 ローカルにまだクラウドへ届いていない新規ノート・付箋・予定があれば合体（スマートマージ）して消失を完全遮断
+                        const currentLocal = (() => {
+                            try {
+                                const s = localStorage.getItem(LOCAL_STORAGE_KEY);
+                                return s ? sanitizeData(JSON.parse(s)) : null;
+                            } catch { return null; }
+                        })();
+                        const mergedData = currentLocal ? mergeAppData(currentLocal, cloudData) : cloudData;
+                        setData(mergedData);
+                        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(mergedData));
+
+                        // もしローカルから新しく合体されたデータがあればクラウドにも即時反映
+                        if (currentLocal && (
+                            (mergedData.notebookNotes?.length || 0) > (cloudData.notebookNotes?.length || 0) ||
+                            (mergedData.stickies?.length || 0) > (cloudData.stickies?.length || 0) ||
+                            (mergedData.events?.length || 0) > (cloudData.events?.length || 0)
+                        )) {
+                            setDoc(userDocRef, cleanForFirestore(mergedData)).catch(console.error);
+                        }
+
                         const isCache = snapshot.metadata.fromCache;
                         setCloudSyncInfo({
                             status: 'success',
                             lastSyncedAt: `${new Date().toLocaleTimeString()} ${isCache ? '(端末保存)' : '(☁️クラウド直結)'}`,
                             errorMessage: null,
-                            cloudEventCount: (cloudData.events || []).length,
-                            cloudStickyCount: (cloudData.stickies || []).length,
-                            cloudNotebookCount: (cloudData.notebookNotes || []).length
+                            cloudEventCount: (mergedData.events || []).length,
+                            cloudStickyCount: (mergedData.stickies || []).length,
+                            cloudNotebookCount: (mergedData.notebookNotes || []).length
                         });
                     } else {
+                        // クラウドにドキュメントがまだない場合、現在のローカルデータを初期データとしてクラウドへ保存
+                        const currentLocal = (() => {
+                            try {
+                                const s = localStorage.getItem(LOCAL_STORAGE_KEY);
+                                return s ? sanitizeData(JSON.parse(s)) : null;
+                            } catch { return null; }
+                        })();
+                        if (currentLocal && (
+                            (currentLocal.notebookNotes?.length || 0) > 0 ||
+                            (currentLocal.stickies?.length || 0) > 0 ||
+                            (currentLocal.events?.length || 0) > 0
+                        )) {
+                            setDoc(userDocRef, cleanForFirestore(currentLocal)).catch(console.error);
+                        }
                         setCloudSyncInfo({
                             status: 'success',
                             lastSyncedAt: new Date().toLocaleTimeString(),
@@ -277,9 +309,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 });
 
             } else {
-                // 未ログイン時は完全に空データをセット（勝手なサンプル生成・汚染の完全遮断）
-                setData(EMPTY_DATA);
-                localStorage.removeItem(LOCAL_STORAGE_KEY);
+                // 🔑 未ログイン時: ローカル保存データがあればそれを維持（ブラウザ再起動やPC再起動でも絶対に消失しないように保護）
+                try {
+                    const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+                    if (saved) {
+                        setData(sanitizeData(JSON.parse(saved)));
+                    } else {
+                        setData(EMPTY_DATA);
+                    }
+                } catch {
+                    setData(EMPTY_DATA);
+                }
                 setCloudSyncInfo({ status: 'idle', lastSyncedAt: null, errorMessage: null, cloudEventCount: null, cloudStickyCount: null, cloudNotebookCount: null });
                 if (unsubscribeFirestore) unsubscribeFirestore();
             }
@@ -360,10 +400,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
     };
 
-    // ログアウト
+    // ログアウト (明示的にログアウトした時のみ端末データをクリア)
     const logout = async () => {
         try {
             await signOut(auth);
+            setData(EMPTY_DATA);
+            localStorage.removeItem(LOCAL_STORAGE_KEY);
         } catch (error) {
             console.error('Sign-out failed:', error);
         }
