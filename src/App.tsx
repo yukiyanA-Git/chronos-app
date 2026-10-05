@@ -131,11 +131,23 @@ function App() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '16px',
-                background: 'var(--bg-primary)',
-                color: 'var(--text-primary)'
+                background: '#0f172a',
+                color: '#f8fafc'
             }}>
-                <Clock size={40} style={{ animation: 'spin 1s linear infinite' }} />
-                <p style={{ fontSize: '1.1rem', opacity: 0.7 }}>データを読み込み中...</p>
+                <img
+                    src="/chronos-icon.png"
+                    alt="Chronos"
+                    style={{
+                        width: '90px',
+                        height: '90px',
+                        borderRadius: '22px',
+                        boxShadow: '0 0 35px rgba(45, 212, 191, 0.4)'
+                    }}
+                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '8px' }}>
+                    <Clock size={20} style={{ animation: 'spin 1.5s linear infinite', color: '#38bdf8' }} />
+                    <p style={{ fontSize: '1rem', color: '#94a3b8', margin: 0, fontWeight: 500 }}>データを読み込み中...</p>
+                </div>
             </div>
         );
     }
