@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { ChevronLeft, ChevronRight, Plus, X, Calendar as CalIcon, Trash2, FileSpreadsheet, Pencil } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, X, Calendar as CalIcon, Trash2, FileSpreadsheet, Pencil, BookOpen, ExternalLink } from 'lucide-react';
 import { getJapaneseEra, getJapaneseHoliday } from '../utils/japaneseCalendar';
 import type { CalendarEvent } from '../types';
 
@@ -8,6 +8,7 @@ interface CalendarProps {
     onDateClick?: (dateStr: string) => void;
     onEventClick: (eventId: string) => void;
     onExportClick?: () => void;
+    onViewChange?: (view: any) => void;
 }
 
 const normalizeDateStr = (rawDate: string): string => {
@@ -32,19 +33,16 @@ const isEventOnDate = (ev: CalendarEvent, targetDateStr: string): boolean => {
     return target >= start && target <= end;
 };
 
-export const Calendar: React.FC<CalendarProps> = ({ onDateClick, onEventClick, onExportClick }) => {
+export const Calendar: React.FC<CalendarProps> = ({ onDateClick, onEventClick, onExportClick, onViewChange }) => {
     const {
         data, addStickyToDate, attachStickyToDate, deleteCalendarEvent, addCalendarEvent,
-        draftStickyText, draftStickyColor, setDraftStickyText, setDraftStickyColor, clearDraftSticky
+        draftStickyText, draftStickyColor, setDraftStickyText, setDraftStickyColor, clearDraftSticky,
+        setTargetNotebookDate, addNotebookNote
     } = useApp();
     const [currentDate, setCurrentDate] = useState(() => new Date());
 
-    // 初期状態で今日を選択
-    const todayFormatted = (() => {
-        const d = new Date();
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    })();
-    const [selectedDate, setSelectedDate] = useState<string | null>(todayFormatted);
+    // 初期状態ではサイドパネルを閉じ、日付タップ時に展開
+    const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
     // 右側パネル内での「新規予定作成」インラインフォーム展開状態
     const [showNewEventForm, setShowNewEventForm] = useState(false);
@@ -106,12 +104,15 @@ export const Calendar: React.FC<CalendarProps> = ({ onDateClick, onEventClick, o
     const stickies = data.stickies || [];
     const availableStickies = stickies.filter(s => !s.attachedDate);
 
-    // 選択中日付のイベント・付箋を取得
+    // 選択中日付のイベント・付箋・ノートを取得
     const selectedDateEvents = selectedDate
         ? data.events.filter(ev => isEventOnDate(ev, selectedDate))
         : [];
     const selectedDateStickies = selectedDate
         ? stickies.filter(s => s.attachedDate && normalizeDateStr(s.attachedDate) === normalizeDateStr(selectedDate))
+        : [];
+    const selectedDateNotes = selectedDate
+        ? (data.notebookNotes || []).filter(n => n.date && normalizeDateStr(n.date) === normalizeDateStr(selectedDate))
         : [];
 
     // 日付セルクリック処理
@@ -228,6 +229,7 @@ export const Calendar: React.FC<CalendarProps> = ({ onDateClick, onEventClick, o
                             else if (dayOfWeek === 6) dayColor = '#3b82f6';
 
                             const dateStickies = stickies.filter(s => s.attachedDate === cellDateStr);
+                            const dateNotes = (data.notebookNotes || []).filter(n => n.date && normalizeDateStr(n.date) === cellDateStr);
 
                             return (
                                 <div
@@ -236,7 +238,7 @@ export const Calendar: React.FC<CalendarProps> = ({ onDateClick, onEventClick, o
                                     onClick={() => handleSelectDateCell(cellDateStr)}
                                     style={isHoliday ? { backgroundColor: 'rgba(239, 68, 68, 0.03)' } : undefined}
                                 >
-                                    {/* 日付番号 + 祝日 */}
+                                    {/* 日付番号 + 祝日 + バッジ */}
                                     <div className="day-number-row">
                                         <span className="day-number" style={dayColor ? { color: dayColor } : undefined}>
                                             {dateObj.getDate()}
@@ -244,11 +246,18 @@ export const Calendar: React.FC<CalendarProps> = ({ onDateClick, onEventClick, o
                                                 <span className="holiday-label" title={holidayName}>{holidayName}</span>
                                             )}
                                         </span>
-                                        {dateStickies.length > 0 && (
-                                            <span className="day-sticky-count-badge" title={`付箋: ${dateStickies.length}件`}>
-                                                📌 {dateStickies.length}
-                                            </span>
-                                        )}
+                                        <div className="day-badges-group" style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
+                                            {dateStickies.length > 0 && (
+                                                <span className="day-sticky-count-badge" title={`付箋: ${dateStickies.length}件`}>
+                                                    📌 {dateStickies.length}
+                                                </span>
+                                            )}
+                                            {dateNotes.length > 0 && (
+                                                <span className="day-notebook-badge" title={`ノート: ${dateNotes.length}件`}>
+                                                    📔{dateNotes.length > 1 ? ` ${dateNotes.length}` : ''}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
 
                                     {/* 付箋カラーマーカー */}
@@ -541,7 +550,98 @@ export const Calendar: React.FC<CalendarProps> = ({ onDateClick, onEventClick, o
                                 )}
                             </div>
 
-                            {/* セクション 3: 未貼付け付箋からのアタッチ */}
+                            {/* セクション 3: この日のノート */}
+                            <div className="side-panel-section">
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                    <h3 style={{ margin: 0 }}><BookOpen size={16} /> この日のノート ({selectedDateNotes.length}件)</h3>
+                                    {onViewChange && selectedDate && (
+                                        <div style={{ display: 'flex', gap: '6px' }}>
+                                            <button
+                                                type="button"
+                                                className="btn btn-sm btn-secondary"
+                                                style={{ fontSize: '11px', padding: '3px 8px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                                onClick={() => {
+                                                    setTargetNotebookDate(selectedDate);
+                                                    onViewChange('notebook');
+                                                }}
+                                            >
+                                                <span>ノートを開く</span>
+                                                <ExternalLink size={12} />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className="btn btn-sm btn-secondary"
+                                                style={{ fontSize: '11px', padding: '3px 8px', display: 'inline-flex', alignItems: 'center', gap: '2px', color: 'var(--accent, #6366f1)' }}
+                                                onClick={() => {
+                                                    const count = selectedDateNotes.length;
+                                                    addNotebookNote({
+                                                        title: `${selectedDate} デイリーログ (#${count + 1})`,
+                                                        content: '',
+                                                        type: 'daily',
+                                                        date: selectedDate,
+                                                        color: '#ffffff',
+                                                        isLocked: false
+                                                    });
+                                                    setTargetNotebookDate(selectedDate);
+                                                    onViewChange('notebook');
+                                                }}
+                                                title="この日付に新しいページを追加"
+                                            >
+                                                <Plus size={11} />
+                                                <span>＋追加</span>
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                                {selectedDateNotes.length === 0 ? (
+                                    <p className="empty-text">
+                                        この日のノートはありません
+                                        {onViewChange && selectedDate && (
+                                            <button
+                                                type="button"
+                                                className="btn-link"
+                                                style={{ marginLeft: '8px', fontSize: '12px', color: 'var(--accent, #6366f1)', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}
+                                                onClick={() => {
+                                                    setTargetNotebookDate(selectedDate);
+                                                    onViewChange('notebook');
+                                                }}
+                                            >
+                                                ＋ この日のノートを作成
+                                            </button>
+                                        )}
+                                    </p>
+                                ) : (
+                                    <div className="side-panel-list">
+                                        {selectedDateNotes.map(n => (
+                                            <div
+                                                key={n.id}
+                                                className="side-panel-item"
+                                                style={{
+                                                    borderLeftColor: '#6366f1',
+                                                    cursor: 'pointer',
+                                                    backgroundColor: 'rgba(99, 102, 241, 0.04)'
+                                                }}
+                                                onClick={() => {
+                                                    if (selectedDate) {
+                                                        setTargetNotebookDate(selectedDate);
+                                                        onViewChange?.('notebook');
+                                                    }
+                                                }}
+                                                title="クリックしてノートを開く"
+                                            >
+                                                <div className="side-panel-item-info">
+                                                    <strong>📔 {n.title || '無題のノート'}</strong>
+                                                    <p className="item-desc" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxHeight: '1.4em' }}>
+                                                        {n.content ? n.content.slice(0, 50) + (n.content.length > 50 ? '...' : '') : '(本文なし)'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* セクション 4: 未貼付け付箋からのアタッチ */}
                             {availableStickies.length > 0 && (
                                 <div className="side-panel-section">
                                     <h3>🗂️ 未貼付けの付箋から選択して貼る</h3>
