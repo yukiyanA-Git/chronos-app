@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import LZString from 'lz-string';
-import type { AppData, CalendarEvent, Memo, Period, StickyNote, TimetableCell } from '../types';
+import type { AppData, CalendarEvent, Memo, Period, StickyNote, TimetableCell, NotebookNote } from '../types';
 import { auth, googleProvider, db } from '../firebase';
 import { signInWithPopup, signOut, onAuthStateChanged, type User } from 'firebase/auth';
 import { doc, setDoc, onSnapshot, getDoc, getDocFromServer } from 'firebase/firestore';
@@ -45,6 +45,15 @@ interface AppContextProps {
     renameStickyFolder: (id: string, name: string) => void;
     deleteStickyFolder: (id: string) => void;
     moveStickyToFolder: (stickyId: string, folderId: string | null) => void;
+    // ノート (Notebook) 操作
+    addNotebookNote: (note: Omit<NotebookNote, 'id' | 'createdAt' | 'updatedAt'>) => string;
+    updateNotebookNote: (id: string, updates: Partial<NotebookNote>) => void;
+    deleteNotebookNote: (id: string) => void;
+    addVoiceNotebookNote: (content: string) => void;
+    targetNotebookDate: string | null;
+    setTargetNotebookDate: (date: string | null) => void;
+    draftNotebookContent: string;
+    setDraftNotebookContent: (content: string) => void;
     getShareURL: () => string;
     importShareData: (compressed: string) => boolean;
     importFromJSON: (jsonText: string) => boolean;
@@ -56,10 +65,13 @@ interface AppContextProps {
         errorMessage: string | null;
         cloudEventCount: number | null;
         cloudStickyCount: number | null;
+        cloudNotebookCount: number | null;
     };
     forceUploadToCloud: () => Promise<void>;
     forceFetchFromCloud: () => Promise<void>;
     forceSmartMergeCloud: () => Promise<void>;
+    isPremium: boolean;
+    setIsPremium: (val: boolean) => void;
 }
 
 const DEFAULT_TIMETABLE_NAME = '通常出勤';
@@ -81,7 +93,9 @@ const EMPTY_DATA: AppData = {
     events: [],
     memos: [],
     stickies: [],
-    stickyFolders: []
+    stickyFolders: [],
+    notebookNotes: [],
+    isPremium: false
 };
 
 // どんなデータが入っていてもクラッシュさせない安全ガード関数
@@ -96,7 +110,9 @@ const sanitizeData = (raw: any): AppData => {
         events: Array.isArray(raw.events) ? raw.events : [],
         memos: Array.isArray(raw.memos) ? raw.memos : [],
         stickies: Array.isArray(raw.stickies) ? raw.stickies : [],
-        stickyFolders: Array.isArray(raw.stickyFolders) ? raw.stickyFolders : []
+        stickyFolders: Array.isArray(raw.stickyFolders) ? raw.stickyFolders : [],
+        notebookNotes: Array.isArray(raw.notebookNotes) ? raw.notebookNotes : [],
+        isPremium: typeof raw.isPremium === 'boolean' ? raw.isPremium : false
     };
 };
 
@@ -122,6 +138,11 @@ const mergeAppData = (base: AppData, incoming: AppData): AppData => {
     (base.memos || []).forEach(m => memoMap.set(m.id, m));
     (incoming.memos || []).forEach(m => memoMap.set(m.id, m));
 
+    // ノートの統合 (ID重複排除)
+    const notebookMap = new Map<string, NotebookNote>();
+    (base.notebookNotes || []).forEach(n => notebookMap.set(n.id, n));
+    (incoming.notebookNotes || []).forEach(n => notebookMap.set(n.id, n));
+
     // 時間割セルの統合 (両方にあるコマをすべて保持)
     const mergedCells = {
         ...(base.timetable?.cells || {}),
@@ -137,7 +158,9 @@ const mergeAppData = (base: AppData, incoming: AppData): AppData => {
         events: Array.from(eventMap.values()),
         memos: Array.from(memoMap.values()),
         stickies: Array.from(stickyMap.values()),
-        stickyFolders: Array.from(folderMap.values())
+        stickyFolders: Array.from(folderMap.values()),
+        notebookNotes: Array.from(notebookMap.values()),
+        isPremium: !!(incoming.isPremium || base.isPremium)
     };
 };
 
@@ -181,12 +204,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         errorMessage: string | null;
         cloudEventCount: number | null;
         cloudStickyCount: number | null;
+        cloudNotebookCount: number | null;
     }>({
         status: 'idle',
         lastSyncedAt: null,
         errorMessage: null,
         cloudEventCount: null,
-        cloudStickyCount: null
+        cloudStickyCount: null,
+        cloudNotebookCount: null
     });
 
     // 1. テーマ・背景色初期化
@@ -221,23 +246,57 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 unsubscribeFirestore = onSnapshot(userDocRef, { includeMetadataChanges: true }, (snapshot) => {
                     if (snapshot.exists()) {
                         const cloudData = sanitizeData(snapshot.data());
-                        setData(cloudData);
-                        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(cloudData));
+                        // 🔑 ローカルにまだクラウドへ届いていない新規ノート・付箋・予定があれば合体（スマートマージ）して消失を完全遮断
+                        const currentLocal = (() => {
+                            try {
+                                const s = localStorage.getItem(LOCAL_STORAGE_KEY);
+                                return s ? sanitizeData(JSON.parse(s)) : null;
+                            } catch { return null; }
+                        })();
+                        const mergedData = currentLocal ? mergeAppData(currentLocal, cloudData) : cloudData;
+                        setData(mergedData);
+                        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(mergedData));
+
+                        // もしローカルから新しく合体されたデータがあればクラウドにも即時反映
+                        if (currentLocal && (
+                            (mergedData.notebookNotes?.length || 0) > (cloudData.notebookNotes?.length || 0) ||
+                            (mergedData.stickies?.length || 0) > (cloudData.stickies?.length || 0) ||
+                            (mergedData.events?.length || 0) > (cloudData.events?.length || 0)
+                        )) {
+                            setDoc(userDocRef, cleanForFirestore(mergedData)).catch(console.error);
+                        }
+
                         const isCache = snapshot.metadata.fromCache;
                         setCloudSyncInfo({
                             status: 'success',
                             lastSyncedAt: `${new Date().toLocaleTimeString()} ${isCache ? '(端末保存)' : '(☁️クラウド直結)'}`,
                             errorMessage: null,
-                            cloudEventCount: (cloudData.events || []).length,
-                            cloudStickyCount: (cloudData.stickies || []).length
+                            cloudEventCount: (mergedData.events || []).length,
+                            cloudStickyCount: (mergedData.stickies || []).length,
+                            cloudNotebookCount: (mergedData.notebookNotes || []).length
                         });
                     } else {
+                        // クラウドにドキュメントがまだない場合、現在のローカルデータを初期データとしてクラウドへ保存
+                        const currentLocal = (() => {
+                            try {
+                                const s = localStorage.getItem(LOCAL_STORAGE_KEY);
+                                return s ? sanitizeData(JSON.parse(s)) : null;
+                            } catch { return null; }
+                        })();
+                        if (currentLocal && (
+                            (currentLocal.notebookNotes?.length || 0) > 0 ||
+                            (currentLocal.stickies?.length || 0) > 0 ||
+                            (currentLocal.events?.length || 0) > 0
+                        )) {
+                            setDoc(userDocRef, cleanForFirestore(currentLocal)).catch(console.error);
+                        }
                         setCloudSyncInfo({
                             status: 'success',
                             lastSyncedAt: new Date().toLocaleTimeString(),
                             errorMessage: null,
                             cloudEventCount: 0,
-                            cloudStickyCount: 0
+                            cloudStickyCount: 0,
+                            cloudNotebookCount: 0
                         });
                     }
                 }, (err: any) => {
@@ -250,10 +309,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 });
 
             } else {
-                // 未ログイン時は完全に空データをセット（勝手なサンプル生成・汚染の完全遮断）
-                setData(EMPTY_DATA);
-                localStorage.removeItem(LOCAL_STORAGE_KEY);
-                setCloudSyncInfo({ status: 'idle', lastSyncedAt: null, errorMessage: null, cloudEventCount: null, cloudStickyCount: null });
+                // 🔑 未ログイン時: ローカル保存データがあればそれを維持（ブラウザ再起動やPC再起動でも絶対に消失しないように保護）
+                try {
+                    const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+                    if (saved) {
+                        setData(sanitizeData(JSON.parse(saved)));
+                    } else {
+                        setData(EMPTY_DATA);
+                    }
+                } catch {
+                    setData(EMPTY_DATA);
+                }
+                setCloudSyncInfo({ status: 'idle', lastSyncedAt: null, errorMessage: null, cloudEventCount: null, cloudStickyCount: null, cloudNotebookCount: null });
                 if (unsubscribeFirestore) unsubscribeFirestore();
             }
         });
@@ -302,7 +369,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     lastSyncedAt: new Date().toLocaleTimeString(),
                     errorMessage: null,
                     cloudEventCount: (sanitized.events || []).length,
-                    cloudStickyCount: (sanitized.stickies || []).length
+                    cloudStickyCount: (sanitized.stickies || []).length,
+                    cloudNotebookCount: (sanitized.notebookNotes || []).length
                 });
             }).catch((err: any) => {
                 console.error('Firestore save error:', err);
@@ -332,10 +400,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
     };
 
-    // ログアウト
+    // ログアウト (明示的にログアウトした時のみ端末データをクリア)
     const logout = async () => {
         try {
             await signOut(auth);
+            setData(EMPTY_DATA);
+            localStorage.removeItem(LOCAL_STORAGE_KEY);
         } catch (error) {
             console.error('Sign-out failed:', error);
         }
@@ -601,6 +671,68 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
     };
 
+    // ノート (Notebook) 操作
+    const [targetNotebookDate, setTargetNotebookDate] = useState<string | null>(null);
+    const [draftNotebookContent, setDraftNotebookContent] = useState<string>('');
+
+    const addNotebookNote = (note: Omit<NotebookNote, 'id' | 'createdAt' | 'updatedAt'>): string => {
+        const id = 'note-' + Date.now().toString();
+        const now = new Date().toISOString();
+        const newNote: NotebookNote = {
+            ...note,
+            id,
+            isLocked: note.isLocked !== undefined ? note.isLocked : true,
+            bookTitle: note.bookTitle || (note.type === 'free' ? '無題' : undefined),
+            createdAt: now,
+            updatedAt: now
+        };
+        saveData({
+            ...data,
+            notebookNotes: [newNote, ...(data.notebookNotes || [])]
+        });
+        return id;
+    };
+
+    const updateNotebookNote = (id: string, updates: Partial<NotebookNote>) => {
+        const now = new Date().toISOString();
+        saveData({
+            ...data,
+            notebookNotes: (data.notebookNotes || []).map(n => n.id === id ? {
+                ...n,
+                ...updates,
+                updatedAt: now
+            } : n)
+        });
+    };
+
+    const deleteNotebookNote = (id: string) => {
+        saveData({
+            ...data,
+            notebookNotes: (data.notebookNotes || []).filter(n => n.id !== id)
+        });
+    };
+
+    const addVoiceNotebookNote = (content: string) => {
+        const todayStr = new Date().toLocaleDateString('sv-SE');
+        const existingTodayDaily = (data.notebookNotes || []).find(n => n.type === 'daily' && n.date === todayStr);
+        const nowTime = new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+
+        if (existingTodayDaily) {
+            updateNotebookNote(existingTodayDaily.id, {
+                content: (existingTodayDaily.content ? existingTodayDaily.content + '\n' : '') + `[🎙️ ${nowTime}] ${content}`
+            });
+        } else {
+            addNotebookNote({
+                title: `${todayStr} デイリーログ`,
+                content: `[🎙️ ${nowTime}] ${content}`,
+                type: 'daily',
+                date: todayStr,
+                color: '#ffffff',
+                isLocked: true
+            });
+        }
+    };
+
     // 共有URL生成 (互換性保持)
     const getShareURL = (): string => {
         const json = JSON.stringify(data);
@@ -737,6 +869,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                                 }
                             }))
                         }
+                    },
+                    notebookNotes: {
+                        arrayValue: {
+                            values: (clean.notebookNotes || []).map(n => ({
+                                mapValue: {
+                                    fields: {
+                                        id: { stringValue: n.id },
+                                        title: { stringValue: n.title || '' },
+                                        content: { stringValue: n.content || '' },
+                                        type: { stringValue: n.type || 'daily' },
+                                        date: { stringValue: n.date || '' },
+                                        color: { stringValue: n.color || '#ffffff' },
+                                        createdAt: { stringValue: n.createdAt || '' },
+                                        updatedAt: { stringValue: n.updatedAt || '' },
+                                        isLocked: { booleanValue: !!n.isLocked },
+                                        order: { integerValue: n.order || 0 },
+                                        bookTitle: { stringValue: n.bookTitle || '' },
+                                        pageNumber: { integerValue: n.pageNumber || 1 },
+                                        images: {
+                                            arrayValue: {
+                                                values: (n.images || []).map(img => ({ stringValue: img }))
+                                            }
+                                        }
+                                    }
+                                }
+                            }))
+                        }
+                    },
+                    isPremium: {
+                        booleanValue: !!clean.isPremium
                     }
                 }
             };
@@ -761,7 +923,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             lastSyncedAt: new Date().toLocaleTimeString(),
             errorMessage: null,
             cloudEventCount: (data.events || []).length,
-            cloudStickyCount: (data.stickies || []).length
+            cloudStickyCount: (data.stickies || []).length,
+            cloudNotebookCount: (data.notebookNotes || []).length
         });
     };
 
@@ -803,9 +966,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
     };
 
+    // プレミアムプラン（広告非表示・自由帳ノート冊数無制限）切替
+    const setIsPremium = (val: boolean) => {
+        saveData({
+            ...data,
+            isPremium: val
+        });
+    };
+
     return (
         <AppContext.Provider value={{
             data,
+            isPremium: !!data.isPremium,
+            setIsPremium,
             theme,
             bgColor,
             loading: authInitializing,
@@ -840,6 +1013,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             renameStickyFolder,
             deleteStickyFolder,
             moveStickyToFolder,
+            addNotebookNote,
+            updateNotebookNote,
+            deleteNotebookNote,
+            addVoiceNotebookNote,
+            targetNotebookDate,
+            setTargetNotebookDate,
+            draftNotebookContent,
+            setDraftNotebookContent,
             getShareURL,
             importShareData,
             importFromJSON,

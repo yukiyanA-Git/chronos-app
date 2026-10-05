@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Database, AlertTriangle, Download, Upload, Trash2, Palette, FileSpreadsheet, FileText, MessageSquare, ExternalLink } from 'lucide-react';
+import { Database, AlertTriangle, Download, Upload, Trash2, Palette, FileSpreadsheet, FileText, MessageSquare, ExternalLink, Sparkles } from 'lucide-react';
 
 // プリセット背景色（ダーク系）
 const BG_PRESETS_DARK = [
@@ -27,12 +27,12 @@ interface SettingsProps {
 }
 
 export const Settings: React.FC<SettingsProps> = ({ onExportClick }) => {
-    const { data, importFromJSON, resetAllData, bgColor, setBgColor, theme, toggleTheme, currentUser, loginWithGoogle, logout, forceUploadToCloud, forceFetchFromCloud, cloudSyncInfo } = useApp();
+    const { data, importFromJSON, resetAllData, bgColor, setBgColor, theme, toggleTheme, currentUser, loginWithGoogle, logout, forceUploadToCloud, forceFetchFromCloud, cloudSyncInfo, isPremium, setIsPremium } = useApp();
 
     const handleDirectUpload = async () => {
         try {
             await forceUploadToCloud();
-            alert(`📤 クラウドへ保存完了！ (予定 ${(data.events || []).length} 件 / 付箋 ${(data.stickies || []).length} 件)`);
+            alert(`📤 クラウドへ保存完了！ (予定 ${(data.events || []).length} 件 / 付箋 ${(data.stickies || []).length} 件 / ノート ${(data.notebookNotes || []).length} 件)`);
         } catch (e: any) {
             alert(`送信エラー: ${e?.message || '失敗しました'}`);
         }
@@ -173,7 +173,7 @@ export const Settings: React.FC<SettingsProps> = ({ onExportClick }) => {
                             <div style={{ fontSize: '0.75rem', background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '8px', fontFamily: 'monospace', lineHeight: 1.7 }}>
                                 🆔 同期アカウントID (UID): <strong>{currentUser.uid}</strong><br />
                                 ☁️ クラウド通信状態: {cloudSyncInfo.status === 'success' ? <span style={{ color: '#10b981', fontWeight: 'bold' }}>🟢 接続・同期完了 ({cloudSyncInfo.lastSyncedAt || '最新'})</span> : cloudSyncInfo.status === 'syncing' ? <span style={{ color: '#f59e0b' }}>🟡 通信中...</span> : cloudSyncInfo.status === 'error' ? <span style={{ color: '#ef4444', fontWeight: 'bold' }}>🔴 通信エラー: {cloudSyncInfo.errorMessage}</span> : <span>⚪ 未接続</span>}<br />
-                                📊 アカウント同期中の実データ数: 予定 <strong>{(data.events || []).length}</strong> 件 / 付箋 <strong>{(data.stickies || []).length}</strong> 件
+                                📊 アカウント同期中の実データ数: 予定 <strong>{(data.events || []).length}</strong> 件 / 付箋 <strong>{(data.stickies || []).length}</strong> 件 / ノート <strong>{(data.notebookNotes || []).length}</strong> 冊・頁
                             </div>
 
                             <div style={{ display: 'flex', gap: '8px', marginTop: '6px', flexDirection: 'column' }}>
@@ -196,6 +196,63 @@ export const Settings: React.FC<SettingsProps> = ({ onExportClick }) => {
                             <button className="btn btn-primary btn-sm" onClick={loginWithGoogle}>Googleでサインイン</button>
                         </div>
                     )}
+                </div>
+
+                {/* 👑 プラン管理（広告非表示 ＆ ノート冊数無制限） */}
+                <div className="settings-card glass" style={{
+                    background: isPremium
+                        ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.08) 100%)'
+                        : 'linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.05) 100%)',
+                    border: isPremium ? '1px solid #10b981' : '1px solid rgba(245, 158, 11, 0.4)'
+                }}>
+                    <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: isPremium ? '#10b981' : '#f59e0b' }}>
+                        <Sparkles size={20} /> プラン管理（広告非表示 ＆ ノート無制限）
+                    </h2>
+                    <p className="description">
+                        Chronos の利用プラン設定です。広告を非表示にし、ノートを上限なく何冊でも作成・利用できます。
+                    </p>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '14px', background: 'rgba(0,0,0,0.2)', borderRadius: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+                            <div>
+                                <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>現在の適用プラン:</span>
+                                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: isPremium ? '#10b981' : '#f8fafc', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    {isPremium ? '👑 プレミアムプラン (PRO)' : '📄 無料プラン (フリー)'}
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                className={`btn btn-sm ${isPremium ? 'btn-secondary' : 'btn-primary'}`}
+                                onClick={() => {
+                                    const nextState = !isPremium;
+                                    setIsPremium(nextState);
+                                }}
+                                style={{
+                                    fontWeight: 700,
+                                    background: isPremium ? 'rgba(255,255,255,0.1)' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                                    borderColor: isPremium ? 'rgba(255,255,255,0.2)' : '#10b981',
+                                    color: '#ffffff'
+                                }}
+                            >
+                                {isPremium ? '無料プランに切り替え (広告表示/10冊制限)' : '👑 広告非表示＆ノート無制限プランを有効化'}
+                            </button>
+                        </div>
+
+                        <div style={{ fontSize: '0.82rem', lineHeight: 1.8, opacity: 0.9, borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span>{isPremium ? '✅' : '📢'}</span>
+                                <span>画面広告: <strong>{isPremium ? '完全非表示 (クリーン画面)' : '上部・下部に表示'}</strong></span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span>{isPremium ? '✅' : '📕'}</span>
+                                <span>ノート作成数: <strong>{isPremium ? '無制限 (何冊でも作成可能)' : '最大10冊まで'}</strong></span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span>✅</span>
+                                <span>ノートページ数 ＆ 日付ノート: <strong>常に無制限 (無料・有料共通)</strong></span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 {/* 背景カラー設定 */}

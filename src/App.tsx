@@ -13,7 +13,8 @@ import { GuideModal } from './components/GuideModal';
 import { ChronosWidgetPanel } from './components/ChronosWidgetPanel';
 import { AcrylicAdBanner } from './components/AcrylicAdBanner';
 import { ChronosKnowledgeFooter } from './components/ChronosKnowledgeFooter';
-import { LayoutDashboard, Grid, Calendar as CalendarIcon, StickyNote, Settings as SettingsIcon, Circle, Clock, AlertCircle, HelpCircle, LogIn, LogOut } from 'lucide-react';
+import { LayoutDashboard, Grid, Calendar as CalendarIcon, StickyNote, Settings as SettingsIcon, Circle, Clock, AlertCircle, HelpCircle, LogIn, LogOut, BookOpen } from 'lucide-react';
+import { Notebook } from './components/Notebook';
 
 function App() {
     const { data, theme, loading, toggleTheme, importShareData, currentUser, loginWithGoogle, logout } = useApp();
@@ -212,6 +213,14 @@ function App() {
                         <span>付箋ボード</span>
                     </button>
                     <button
+                        className={`menu-item ${currentView === 'notebook' ? 'active' : ''}`}
+                        onClick={() => setCurrentView('notebook')}
+                    >
+                        <BookOpen size={18} />
+                        <span>ノート</span>
+                        <span style={{ fontSize: '10px', background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', padding: '1px 5px', borderRadius: '4px', marginLeft: 'auto', fontWeight: 600 }}>NEW</span>
+                    </button>
+                    <button
                         className={`menu-item ${currentView === 'settings' ? 'active' : ''}`}
                         onClick={() => setCurrentView('settings')}
                     >
@@ -296,6 +305,13 @@ function App() {
                     <span>付箋ボード</span>
                 </button>
                 <button
+                    className={`mobile-nav-item ${currentView === 'notebook' ? 'active' : ''}`}
+                    onClick={() => setCurrentView('notebook')}
+                >
+                    <BookOpen size={20} />
+                    <span>ノート</span>
+                </button>
+                <button
                     className={`mobile-nav-item ${currentView === 'settings' ? 'active' : ''}`}
                     onClick={() => setCurrentView('settings')}
                 >
@@ -354,9 +370,11 @@ function App() {
                     <Calendar
                         onEventClick={handleCalendarEventClick}
                         onExportClick={() => setIsExportModalOpen(true)}
+                        onViewChange={setCurrentView}
                     />
                 )}
                 {currentView === 'memos' && <Memos onExportClick={() => setIsExportModalOpen(true)} />}
+                {currentView === 'notebook' && <Notebook onViewChange={setCurrentView} />}
                 {currentView === 'settings' && <Settings onExportClick={() => setIsExportModalOpen(true)} />}
 
                 {/* 生産性向上ナレッジ ＆ Chronos 活用解説ベース (AdSense 高有用性コンテンツ) */}

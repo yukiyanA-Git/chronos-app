@@ -47,5 +47,6 @@ export const INITIAL_PRESET_DATA: AppData = {
   ],
   "stickyFolders": [
     { "id": "folder-1784271876897", "name": "カレンダーに貼り付け分", "color": "#ef4444", "createdAt": "2026-07-17T07:04:36.897Z" }
-  ]
+  ],
+  "notebookNotes": []
 };

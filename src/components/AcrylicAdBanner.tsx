@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { Sparkles } from 'lucide-react';
+import { useApp } from '../context/AppContext';
 
 interface AcrylicAdBannerProps {
     position?: 'top' | 'bottom';
@@ -12,7 +13,10 @@ declare global {
 }
 
 export const AcrylicAdBanner: React.FC<AcrylicAdBannerProps> = ({ position = 'top' }) => {
+    const { isPremium } = useApp();
+
     useEffect(() => {
+        if (isPremium) return;
         try {
             if (window.adsbygoogle) {
                 (window.adsbygoogle = window.adsbygoogle || []).push({});
@@ -20,7 +24,12 @@ export const AcrylicAdBanner: React.FC<AcrylicAdBannerProps> = ({ position = 'to
         } catch (e) {
             // AdSense プレースホルダー表示用
         }
-    }, []);
+    }, [isPremium]);
+
+    // プレミアムプラン（広告非表示・ノート冊数無制限）契約中は広告を一切非表示
+    if (isPremium) {
+        return null;
+    }
 
     return (
         <div className={`acrylic-ad-frame ${position === 'bottom' ? 'bottom-ad' : 'top-ad'}`}>
