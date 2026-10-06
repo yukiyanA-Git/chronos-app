@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import type { NotebookType } from '../types';
 import {
@@ -145,6 +145,14 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
         }
     }, [activeNoteId]);
 
+    // アクティブなページチップへの自動スクロール参照
+    const activeChipRef = useRef<HTMLButtonElement | null>(null);
+    useEffect(() => {
+        if (activeChipRef.current) {
+            activeChipRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+        }
+    }, [activeNoteId]);
+
     // カレンダー貼付用ダイアログ (自由帳用)
     const [showDateModal, setShowDateModal] = useState(false);
     const [attachDateInput, setAttachDateInput] = useState('');
@@ -180,8 +188,8 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
             return true;
         }).sort((a, b) => {
             if (currentType === 'daily') {
-                // 日付順（新しい日付順、同日内は作成日昇順）
-                return b.date.localeCompare(a.date) || a.createdAt.localeCompare(b.createdAt);
+                // 日付が若い順（過去・古い日付から最新日付へ時系列昇順、同日内は作成日昇順）
+                return a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt);
             } else {
                 // 自由帳: ページ番号順 (作成日時昇順)
                 if (a.pageNumber !== undefined && b.pageNumber !== undefined) {
@@ -215,18 +223,27 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
         }
     }, [targetNotebookDate]);
 
-    // アクティブノートの選択（リスト変更時に範囲外なら保存済みIDまたは先頭を選択）
+    // アクティブノートの選択（リスト変更時に範囲外なら保存済みID、または本日/最新日/先頭を選択）
     useEffect(() => {
         if (filteredNotes.length > 0) {
             if (!activeNoteId || !filteredNotes.some(n => n.id === activeNoteId)) {
                 const savedId = localStorage.getItem('chronos_last_notebook_note_id');
                 const matched = filteredNotes.find(n => n.id === savedId);
-                setActiveNoteId(matched ? matched.id : filteredNotes[0].id);
+                if (matched) {
+                    setActiveNoteId(matched.id);
+                } else if (currentType === 'daily') {
+                    // 前回IDがない/一致しない場合のフォールバック（本日優先、なければ直近・最新の日付）
+                    const todayStr = new Date().toLocaleDateString('sv-SE');
+                    const todayNote = filteredNotes.find(n => n.date === todayStr);
+                    setActiveNoteId(todayNote ? todayNote.id : filteredNotes[filteredNotes.length - 1].id);
+                } else {
+                    setActiveNoteId(filteredNotes[0].id);
+                }
             }
         } else {
             setActiveNoteId(null);
         }
-    }, [filteredNotes, activeNoteId]);
+    }, [filteredNotes, activeNoteId, currentType]);
 
     const activeIndex = filteredNotes.findIndex(n => n.id === activeNoteId);
     const activeNote = filteredNotes.find(n => n.id === activeNoteId);
@@ -701,6 +718,7 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                             filteredNotes.map((n, idx) => (
                                 <button
                                     key={n.id}
+                                    ref={activeNoteId === n.id ? activeChipRef : null}
                                     type="button"
                                     className={`page-chip ${activeNoteId === n.id ? 'active' : ''}`}
                                     onClick={() => setActiveNoteId(n.id)}
