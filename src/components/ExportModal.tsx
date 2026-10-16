@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { X, Download, Copy, Check, FileSpreadsheet, FileText, Calendar, StickyNote } from 'lucide-react';
+import { X, Download, Copy, Check, FileSpreadsheet, FileText, Calendar, StickyNote, CalendarDays } from 'lucide-react';
+import { generateMultiEventsIcs, downloadIcsFile } from '../utils/icalGenerator';
 
 interface ExportModalProps {
     onClose: () => void;
@@ -71,7 +72,18 @@ export const ExportModal: React.FC<ExportModalProps> = ({ onClose }) => {
         URL.revokeObjectURL(url);
     };
 
-    // 2. スプレッドシート用コピー (TSV: タブ区切り)
+    // 2. iCalendar (.ics) 出力 (Googleカレンダー・iPhone・Outlook用)
+    const handleDownloadIcs = () => {
+        if (events.length === 0) {
+            alert('出力対象のカレンダー予定がありません。');
+            return;
+        }
+        const icsContent = generateMultiEventsIcs(events, 'Chronos カレンダー予定');
+        const filename = `chronos_events_${new Date().toISOString().slice(0, 10)}.ics`;
+        downloadIcsFile(filename, icsContent);
+    };
+
+    // 3. スプレッドシート用コピー (TSV: タブ区切り)
     const handleCopyForSheet = () => {
         let tsvContent = '';
 
@@ -241,6 +253,21 @@ export const ExportModal: React.FC<ExportModalProps> = ({ onClose }) => {
                                     <span>Excelでそのまま開いて保存・編集・印刷が可能です</span>
                                 </div>
                             </button>
+
+                            {/* iCalendar (.ics) ダウンロード (カレンダー予定時のみ) */}
+                            {targetType === 'calendar_events' && (
+                                <button
+                                    className="btn btn-secondary export-action-btn"
+                                    onClick={handleDownloadIcs}
+                                    style={{ borderColor: '#38bdf8', background: 'rgba(56, 189, 248, 0.08)' }}
+                                >
+                                    <CalendarDays size={18} style={{ color: '#38bdf8' }} />
+                                    <div>
+                                        <strong style={{ color: '#38bdf8' }}>カレンダーアプリ形式で保存 (.ics)</strong>
+                                        <span>Googleカレンダー・iPhone・Outlookに一括インポート可能</span>
+                                    </div>
+                                </button>
+                            )}
 
                             {/* スプレッドシート用コピー */}
                             <button className="btn btn-secondary export-action-btn" onClick={handleCopyForSheet}>
