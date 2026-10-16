@@ -29,6 +29,28 @@ export interface CalendarEvent {
     desc?: string;
 }
 
+export interface ExternalCalendarEvent {
+    id: string;
+    title: string;
+    date: string;          // YYYY-MM-DD
+    endDate?: string;      // YYYY-MM-DD
+    startTime?: string;    // HH:mm
+    endTime?: string;      // HH:mm
+    desc?: string;
+    location?: string;
+    source?: string;       // e.g. "Google カレンダー"
+    color?: string;        // e.g. "#4285F4"
+}
+
+export interface ExternalCalendarConfig {
+    enabled: boolean;
+    url: string;
+    name: string;
+    color: string;
+    lastSyncedAt?: string;
+    eventsCount?: number;
+}
+
 export interface Memo {
     id: string;
     title: string;

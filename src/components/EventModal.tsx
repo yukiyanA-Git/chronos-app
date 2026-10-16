@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { X, Calendar as CalendarIcon, BookOpen, Trash2 } from 'lucide-react';
-import type { TimetableCell } from '../types';
+import { X, Calendar as CalendarIcon, BookOpen, Trash2, Download, Smartphone } from 'lucide-react';
+import type { TimetableCell, CalendarEvent } from '../types';
+import { generateSingleEventIcs, downloadIcsFile } from '../utils/icalGenerator';
 
 interface EventModalProps {
     isOpen: boolean;
@@ -135,6 +136,27 @@ export const EventModal: React.FC<EventModalProps> = ({
                 onClose();
             }
         }
+    };
+
+    // スマホ・外部カレンダーアプリへ 1タップ追加 (.ics)
+    const handleAddToCalendarApp = () => {
+        if (!title.trim() || !date) {
+            alert('タイトルと日付を入力してください');
+            return;
+        }
+        const tempEvent: CalendarEvent = {
+            id: eventId || `ev_${Date.now()}`,
+            title: title.trim(),
+            date,
+            endDate: endDate || undefined,
+            startTime: startTime || undefined,
+            endTime: endTime || undefined,
+            color,
+            desc: desc.trim() || undefined
+        };
+        const icsString = generateSingleEventIcs(tempEvent);
+        const filename = `${date}_${title.trim().replace(/[\\/:*?"<>|]/g, '_')}.ics`;
+        downloadIcsFile(filename, icsString);
     };
 
     const isEdit = mode === 'timetable' 
@@ -271,6 +293,47 @@ export const EventModal: React.FC<EventModalProps> = ({
                             onChange={(e) => setDesc(e.target.value)}
                         />
                     </div>
+
+                    {mode === 'calendar' && (
+                        <div style={{
+                            marginTop: '6px',
+                            marginBottom: '14px',
+                            padding: '10px 14px',
+                            borderRadius: '10px',
+                            background: 'rgba(56, 189, 248, 0.08)',
+                            border: '1px solid rgba(56, 189, 248, 0.25)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '12px'
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Smartphone size={18} style={{ color: '#38bdf8', flexShrink: 0 }} />
+                                <div style={{ fontSize: '0.8rem', lineHeight: 1.3 }}>
+                                    <div style={{ fontWeight: 600, color: '#f8fafc' }}>スマホ・外部カレンダー連携</div>
+                                    <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>iPhone / Google / Outlook に1タップ追加</div>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                className="btn btn-sm btn-secondary"
+                                onClick={handleAddToCalendarApp}
+                                style={{
+                                    borderColor: '#38bdf8',
+                                    color: '#38bdf8',
+                                    whiteSpace: 'nowrap',
+                                    fontSize: '0.78rem',
+                                    padding: '4px 10px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '5px'
+                                }}
+                                title="端末のカレンダーアプリまたはGoogle/Outlookにこの予定を追加"
+                            >
+                                <Download size={13} /> カレンダーに追加 (.ics)
+                            </button>
+                        </div>
+                    )}
 
                     <div className="modal-footer" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px' }}>
                         {isEdit ? (

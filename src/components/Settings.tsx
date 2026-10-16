@@ -350,6 +350,9 @@ export const Settings: React.FC<SettingsProps> = ({ onExportClick }) => {
                         <h3><FileText size={16} /> サポートしている連携機能</h3>
                         <ul>
                             <li>
+                                <strong>カレンダーアプリ形式保存 (.ics)</strong>: Googleカレンダー・iPhone・Outlookにワンタップで予定を取り込めます。
+                            </li>
+                            <li>
                                 <strong>CSV形式保存</strong>: 文字化けのない標準フォーマットでExcelで直接開けます。
                             </li>
                             <li>

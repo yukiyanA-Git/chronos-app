@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { ChevronLeft, ChevronRight, Plus, X, Calendar as CalIcon, Trash2, FileSpreadsheet, Pencil, BookOpen, ExternalLink } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, X, Calendar as CalIcon, Trash2, FileSpreadsheet, Pencil, BookOpen, ExternalLink, Globe, Settings } from 'lucide-react';
 import { getJapaneseEra, getJapaneseHoliday } from '../utils/japaneseCalendar';
-import type { CalendarEvent } from '../types';
+import type { CalendarEvent, ExternalCalendarEvent, ExternalCalendarConfig } from '../types';
+import { ExternalCalendarModal, getStoredExternalCalendarConfig, getStoredExternalCalendarEvents } from './ExternalCalendarModal';
 
 interface CalendarProps {
     onDateClick?: (dateStr: string) => void;
@@ -33,6 +34,15 @@ const isEventOnDate = (ev: CalendarEvent, targetDateStr: string): boolean => {
     return target >= start && target <= end;
 };
 
+// 外部予定が指定日に該当するか
+const isExtEventOnDate = (ev: ExternalCalendarEvent, targetDateStr: string): boolean => {
+    if (!ev || !ev.date) return false;
+    const start = normalizeDateStr(ev.date);
+    const end = ev.endDate ? normalizeDateStr(ev.endDate) : start;
+    const target = normalizeDateStr(targetDateStr);
+    return target >= start && target <= end;
+};
+
 export const Calendar: React.FC<CalendarProps> = ({ onDateClick, onEventClick, onExportClick, onViewChange }) => {
     const {
         data, addStickyToDate, attachStickyToDate, deleteCalendarEvent, addCalendarEvent,
@@ -43,6 +53,23 @@ export const Calendar: React.FC<CalendarProps> = ({ onDateClick, onEventClick, o
 
     // 初期状態ではサイドパネルを閉じ、日付タップ時に展開
     const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+    // 外部カレンダー (Google等) 重ね合わせ表示状態
+    const [isExtModalOpen, setIsExtModalOpen] = useState(false);
+    const [extConfig, setExtConfig] = useState<ExternalCalendarConfig>(getStoredExternalCalendarConfig);
+    const [extEvents, setExtEvents] = useState<ExternalCalendarEvent[]>(getStoredExternalCalendarEvents);
+
+    const handleExtConfigUpdated = (newConfig: ExternalCalendarConfig, newEvents: ExternalCalendarEvent[]) => {
+        setExtConfig(newConfig);
+        setExtEvents(newEvents);
+    };
+
+    const handleToggleExtCalendar = () => {
+        const newEnabled = !extConfig.enabled;
+        const newConfig = { ...extConfig, enabled: newEnabled };
+        setExtConfig(newConfig);
+        localStorage.setItem('chronos_external_calendar_config', JSON.stringify(newConfig));
+    };
 
     // 右側パネル内での「新規予定作成」インラインフォーム展開状態
     const [showNewEventForm, setShowNewEventForm] = useState(false);
@@ -114,6 +141,9 @@ export const Calendar: React.FC<CalendarProps> = ({ onDateClick, onEventClick, o
     const selectedDateNotes = selectedDate
         ? (data.notebookNotes || []).filter(n => n.date && normalizeDateStr(n.date) === normalizeDateStr(selectedDate))
         : [];
+    const selectedDateExtEvents = (selectedDate && extConfig.enabled)
+        ? extEvents.filter(ev => isExtEventOnDate(ev, selectedDate))
+        : [];
 
     // 日付セルクリック処理
     const handleSelectDateCell = (dateStr: string) => {
@@ -171,6 +201,39 @@ export const Calendar: React.FC<CalendarProps> = ({ onDateClick, onEventClick, o
                             <ChevronRight size={16} />
                         </button>
                     </div>
+
+                    {/* 外部カレンダー (Google等) 重ね合わせ表示 ON/OFF ボタン */}
+                    <div className="external-cal-controls" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <button
+                            type="button"
+                            className={`btn btn-sm ${extConfig.enabled ? 'btn-primary' : 'btn-secondary'}`}
+                            onClick={handleToggleExtCalendar}
+                            title="外部カレンダー (Google等) の重ね合わせ表示をON/OFF切替"
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                fontSize: '0.8rem',
+                                padding: '5px 10px',
+                                borderColor: extConfig.enabled ? extConfig.color : undefined,
+                                backgroundColor: extConfig.enabled ? `${extConfig.color}25` : undefined,
+                                color: extConfig.enabled ? (extConfig.color === '#4285F4' ? '#60a5fa' : extConfig.color) : undefined
+                            }}
+                        >
+                            <Globe size={14} />
+                            <span>{extConfig.name || '外部予定'}: {extConfig.enabled ? 'ON' : 'OFF'}</span>
+                        </button>
+                        <button
+                            type="button"
+                            className="btn btn-icon btn-sm btn-secondary"
+                            onClick={() => setIsExtModalOpen(true)}
+                            title="外部カレンダーのURL・色・同期設定"
+                            style={{ padding: '6px' }}
+                        >
+                            <Settings size={14} />
+                        </button>
+                    </div>
+
                     {onExportClick && (
                         <button className="btn btn-secondary" onClick={onExportClick} title="Excel・スプレッドシート連携">
                             <FileSpreadsheet size={16} /> エクスポート
@@ -230,6 +293,7 @@ export const Calendar: React.FC<CalendarProps> = ({ onDateClick, onEventClick, o
 
                             const dateStickies = stickies.filter(s => s.attachedDate === cellDateStr);
                             const dateNotes = (data.notebookNotes || []).filter(n => n.date && normalizeDateStr(n.date) === cellDateStr);
+                            const dayExtEvents = extConfig.enabled ? extEvents.filter(ev => isExtEventOnDate(ev, cellDateStr)) : [];
 
                             return (
                                 <div
@@ -255,6 +319,26 @@ export const Calendar: React.FC<CalendarProps> = ({ onDateClick, onEventClick, o
                                             {dateNotes.length > 0 && (
                                                 <span className="day-notebook-badge" title={`ノート: ${dateNotes.length}件`}>
                                                     📔{dateNotes.length > 1 ? ` ${dateNotes.length}` : ''}
+                                                </span>
+                                            )}
+                                            {dayExtEvents.length > 0 && (
+                                                <span
+                                                    className="day-ext-badge"
+                                                    style={{
+                                                        fontSize: '0.68rem',
+                                                        padding: '1px 5px',
+                                                        borderRadius: '4px',
+                                                        backgroundColor: `${extConfig.color || '#4285F4'}25`,
+                                                        color: extConfig.color === '#4285F4' ? '#60a5fa' : extConfig.color,
+                                                        border: `1px solid ${extConfig.color || '#4285F4'}50`,
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        gap: '2px',
+                                                        fontWeight: 600
+                                                    }}
+                                                    title={`${extConfig.name || '外部予定'}: ${dayExtEvents.length}件`}
+                                                >
+                                                    🌐 {dayExtEvents.length}
                                                 </span>
                                             )}
                                         </div>
@@ -284,6 +368,31 @@ export const Calendar: React.FC<CalendarProps> = ({ onDateClick, onEventClick, o
                                                     title={`${ev.title}${isPeriod ? ` (${ev.date}〜${ev.endDate})` : ''}`}
                                                     onClick={(e) => { e.stopPropagation(); onEventClick(ev.id); }}>
                                                     {isPeriod && '🚩 '}{ev.startTime ? `${ev.startTime} ` : ''}{ev.title}
+                                                </div>
+                                            );
+                                        })}
+                                        {/* 外部カレンダー予定 (Google等) */}
+                                        {dayExtEvents.map(extEv => {
+                                            const isPeriod = extEv.endDate && extEv.endDate > extEv.date;
+                                            const accentColor = extEv.color || extConfig.color || '#4285F4';
+                                            return (
+                                                <div
+                                                    key={extEv.id}
+                                                    className={`cal-event-tag external-event-tag ${isPeriod ? 'period-event' : ''}`}
+                                                    style={{
+                                                        backgroundColor: `${accentColor}18`,
+                                                        borderColor: accentColor,
+                                                        borderWidth: '1px',
+                                                        borderStyle: 'dashed',
+                                                        color: '#f8fafc'
+                                                    }}
+                                                    title={`[${extEv.source || '外部カレンダー'}] ${extEv.title}${extEv.startTime ? ' (' + extEv.startTime + ')' : ''}`}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleSelectDateCell(cellDateStr);
+                                                    }}
+                                                >
+                                                    🌐 {isPeriod && '🚩 '}{extEv.startTime ? `${extEv.startTime} ` : ''}{extEv.title}
                                                 </div>
                                             );
                                         })}
@@ -660,10 +769,85 @@ export const Calendar: React.FC<CalendarProps> = ({ onDateClick, onEventClick, o
                                     </div>
                                 </div>
                             )}
+
+                            {/* セクション 5: 外部カレンダー (Google等) 予定セクション */}
+                            {extConfig.enabled && (
+                                <div className="side-panel-section">
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                        <h3 style={{ margin: 0, color: extConfig.color === '#4285F4' ? '#60a5fa' : (extConfig.color || '#4285F4'), display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <Globe size={16} /> {extConfig.name || 'Google カレンダー'} ({selectedDateExtEvents.length}件)
+                                        </h3>
+                                        <button
+                                            type="button"
+                                            className="btn btn-sm btn-secondary"
+                                            style={{ fontSize: '0.72rem', padding: '2px 8px' }}
+                                            onClick={() => setIsExtModalOpen(true)}
+                                        >
+                                            設定・更新
+                                        </button>
+                                    </div>
+                                    {selectedDateExtEvents.length === 0 ? (
+                                        <p className="empty-text">この日の外部予定はありません</p>
+                                    ) : (
+                                        <div className="side-panel-list">
+                                            {selectedDateExtEvents.map(extEv => {
+                                                const isPeriod = extEv.endDate && extEv.endDate > extEv.date;
+                                                const accentColor = extEv.color || extConfig.color || '#4285F4';
+                                                return (
+                                                    <div
+                                                        key={extEv.id}
+                                                        className="side-panel-item"
+                                                        style={{
+                                                            borderLeft: `3px dashed ${accentColor}`,
+                                                            background: `${accentColor}10`
+                                                        }}
+                                                    >
+                                                        <div className="side-panel-item-info">
+                                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                                                                <strong style={{ color: '#f8fafc' }}>{isPeriod && '🚩 '}{extEv.title}</strong>
+                                                                <span style={{ fontSize: '0.68rem', color: '#94a3b8', background: 'rgba(255,255,255,0.06)', padding: '1px 6px', borderRadius: '4px', whiteSpace: 'nowrap' }}>
+                                                                    閲覧専用
+                                                                </span>
+                                                            </div>
+                                                            {isPeriod && (
+                                                                <div className="period-badge" style={{ marginTop: '2px' }}>
+                                                                    🗓️ {extEv.date} 〜 {extEv.endDate}
+                                                                </div>
+                                                            )}
+                                                            {extEv.startTime && (
+                                                                <span className="time-badge" style={{ marginTop: '3px', display: 'inline-block' }}>
+                                                                    ⏰ {extEv.startTime}{extEv.endTime ? ` - ${extEv.endTime}` : ''}
+                                                                </span>
+                                                            )}
+                                                            {extEv.location && (
+                                                                <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '3px' }}>
+                                                                    📍 {extEv.location}
+                                                                </div>
+                                                            )}
+                                                            {extEv.desc && (
+                                                                <p className="item-desc" style={{ marginTop: '4px', whiteSpace: 'pre-wrap', maxHeight: '60px', overflowY: 'auto' }}>
+                                                                    {extEv.desc}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
             </div>
+
+            {/* 外部カレンダー (Google等) 重ね合わせ設定モーダル */}
+            <ExternalCalendarModal
+                isOpen={isExtModalOpen}
+                onClose={() => setIsExtModalOpen(false)}
+                onConfigUpdated={handleExtConfigUpdated}
+            />
         </section>
     );
 };
