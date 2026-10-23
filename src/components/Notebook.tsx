@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useApp } from '../context/AppContext';
-import type { NotebookType } from '../types';
+import type { NotebookType, NotebookNote } from '../types';
 import {
     BookOpen, Calendar as CalendarIcon, FileText, ChevronLeft, ChevronRight,
     Plus, Lock, Unlock, Search, Trash2, Image, ExternalLink,
@@ -248,6 +248,91 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
     const activeIndex = filteredNotes.findIndex(n => n.id === activeNoteId);
     const activeNote = filteredNotes.find(n => n.id === activeNoteId);
 
+    // 編集中のローカル入力状態 (IME変換中・連打時の強制確定や2重確定バグを完全防止)
+    const [localContent, setLocalContent] = useState<string>('');
+    const [localTitle, setLocalTitle] = useState<string>('');
+    const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+
+    const pendingChangesRef = useRef<{ noteId: string; content?: string; title?: string } | null>(null);
+    const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const isComposingRef = useRef(false);
+
+    // 未保存変更の即時フラッシュ保存
+    const flushPendingSave = () => {
+        if (saveTimerRef.current) {
+            clearTimeout(saveTimerRef.current);
+            saveTimerRef.current = null;
+        }
+        if (pendingChangesRef.current && pendingChangesRef.current.noteId) {
+            const p = pendingChangesRef.current;
+            const noteId = p.noteId;
+            const updates: Partial<NotebookNote> = {};
+            if (p.content !== undefined) updates.content = p.content;
+            if (p.title !== undefined) updates.title = p.title;
+
+            setSaveStatus('saving');
+            updateNotebookNote(noteId, updates);
+            pendingChangesRef.current = null;
+
+            setTimeout(() => {
+                setSaveStatus('saved');
+                setTimeout(() => setSaveStatus('idle'), 2000);
+            }, 300);
+        }
+    };
+
+    // デバウンス自動保存の予約
+    const scheduleSave = (newContent?: string, newTitle?: string) => {
+        if (!activeNote || activeNote.isLocked) return;
+
+        pendingChangesRef.current = {
+            noteId: activeNote.id,
+            content: newContent !== undefined ? newContent : (pendingChangesRef.current?.content !== undefined ? pendingChangesRef.current.content : localContent),
+            title: newTitle !== undefined ? newTitle : (pendingChangesRef.current?.title !== undefined ? pendingChangesRef.current.title : localTitle),
+        };
+
+        if (saveTimerRef.current) {
+            clearTimeout(saveTimerRef.current);
+            saveTimerRef.current = null;
+        }
+
+        // IME入力・変換中ならタイマー起動を見送り (compositionEnd で起動)
+        if (isComposingRef.current) return;
+
+        // タイピング休止から 800ms 後に自動保存
+        saveTimerRef.current = setTimeout(() => {
+            flushPendingSave();
+        }, 800);
+    };
+
+    // 選択中ノートが切り替わった時の同期処理 (直前ノートの未保存分をフラッシュし、新ノートの内容をセット)
+    useEffect(() => {
+        flushPendingSave();
+
+        if (activeNote) {
+            setLocalContent(activeNote.content || '');
+            setLocalTitle(cleanLegacyPageTitle(activeNote.title, activeNote.pageNumber) || '');
+            setSaveStatus('idle');
+        } else {
+            setLocalContent('');
+            setLocalTitle('');
+            setSaveStatus('idle');
+        }
+    }, [activeNote?.id]);
+
+    // アンマウント時・タブを閉じる直前に未保存データをフラッシュ保存
+    useEffect(() => {
+        const handleBeforeUnload = () => {
+            flushPendingSave();
+        };
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+            if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+            flushPendingSave();
+        };
+    }, []);
+
     // 新規ノートの作成
     const handleConfirmCreateNewBook = () => {
         if (isBookLimitReached) {
@@ -310,6 +395,7 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
 
     // 新規ページ作成 (今日のページ、または次のページを追加)
     const handleCreatePage = () => {
+        flushPendingSave();
         const todayStr = new Date().toLocaleDateString('sv-SE');
         let newTitle = '';
         if (currentType === 'daily') {
@@ -349,6 +435,7 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
 
     // 過去日付・指定日付での新規ページ作成
     const handleCreatePageWithDate = (targetDate: string) => {
+        flushPendingSave();
         if (!targetDate) return;
         const sameDayNotes = notes.filter(n => n.type === 'daily' && n.date === targetDate);
         const newTitle = sameDayNotes.length > 0
@@ -388,12 +475,14 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
     // ページ送り (前へ / 次へ)
     const handlePrevPage = () => {
         if (activeIndex > 0) {
+            flushPendingSave();
             setActiveNoteId(filteredNotes[activeIndex - 1].id);
         }
     };
 
     const handleNextPage = () => {
         if (activeIndex < filteredNotes.length - 1) {
+            flushPendingSave();
             setActiveNoteId(filteredNotes[activeIndex + 1].id);
         }
     };
@@ -434,6 +523,7 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
 
     // モード切替: 日付ログへ（本日が優先、なければ直近）
     const handleSwitchToDaily = () => {
+        flushPendingSave();
         setCurrentType('daily');
         setSearchQuery('');
         const todayStr = new Date().toLocaleDateString('sv-SE');
@@ -452,6 +542,7 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
 
     // モード切替: 自由ノートへ
     const handleSwitchToFree = () => {
+        flushPendingSave();
         setCurrentType('free');
         setSearchQuery('');
         const bookNotes = notes
@@ -472,19 +563,22 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
     // ロック切り替え (閲覧モード ⇄ 編集モード)
     const handleToggleLock = () => {
         if (!activeNote) return;
+        flushPendingSave();
         updateNotebookNote(activeNote.id, { isLocked: !activeNote.isLocked });
     };
 
     // 本文変更 (自動保存)
     const handleContentChange = (content: string) => {
         if (!activeNote || activeNote.isLocked) return;
-        updateNotebookNote(activeNote.id, { content });
+        setLocalContent(content);
+        scheduleSave(content, undefined);
     };
 
     // タイトル変更
     const handleTitleChange = (title: string) => {
         if (!activeNote || activeNote.isLocked) return;
-        updateNotebookNote(activeNote.id, { title });
+        setLocalTitle(title);
+        scheduleSave(undefined, title);
     };
 
     // 用紙カラー変更
@@ -684,7 +778,7 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                                     key={book}
                                     type="button"
                                     className={`book-pill-tab ${isSelected ? 'active' : ''}`}
-                                    onClick={() => { setSelectedBook(book); }}
+                                    onClick={() => { flushPendingSave(); setSelectedBook(book); }}
                                     onDoubleClick={handleOpenRenameBook}
                                     title={isSelected ? "ダブルクリックまたは「名前変更」でノート名を編集" : `「${book}」に切り替え`}
                                 >
@@ -721,7 +815,7 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                                     ref={activeNoteId === n.id ? activeChipRef : null}
                                     type="button"
                                     className={`page-chip ${activeNoteId === n.id ? 'active' : ''}`}
-                                    onClick={() => setActiveNoteId(n.id)}
+                                    onClick={() => { flushPendingSave(); setActiveNoteId(n.id); }}
                                     title={`P.${idx + 1}: ${n.date} - ${cleanLegacyPageTitle(n.title, idx + 1) || '(タイトルなし)'}`}
                                 >
                                     <span className="chip-pnum">P.{idx + 1}</span>
@@ -866,6 +960,17 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
 
                             {/* ツール群: ロック切替、用紙色、画像添付、印刷、削除 */}
                             <div className="sheet-header-tools">
+                                {/* 自動保存状態インジケーター */}
+                                {saveStatus === 'saving' && (
+                                    <span style={{ fontSize: '0.72rem', color: '#94a3b8', display: 'inline-flex', alignItems: 'center', gap: '4px', marginRight: '4px' }}>
+                                        <span className="spin-anim" style={{ display: 'inline-block' }}>⏳</span> 保存中...
+                                    </span>
+                                )}
+                                {saveStatus === 'saved' && (
+                                    <span style={{ fontSize: '0.72rem', color: '#10b981', display: 'inline-flex', alignItems: 'center', gap: '4px', marginRight: '4px' }}>
+                                        ✓ 自動保存済み
+                                    </span>
+                                )}
                                 {/* 保護ロック切り替え (要件⑥: 基本ロック・誤消去防止) */}
                                 <button
                                     className={`sheet-lock-btn ${activeNote.isLocked ? 'locked' : 'unlocked'}`}
@@ -941,7 +1046,25 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                                 <input
                                     type="text"
                                     className="sheet-title-input"
-                                    value={cleanLegacyPageTitle(activeNote.title, activeNote.pageNumber)}
+                                    value={localTitle}
+                                    onCompositionStart={() => {
+                                        isComposingRef.current = true;
+                                    }}
+                                    onCompositionEnd={(e) => {
+                                        isComposingRef.current = false;
+                                        const val = (e.target as HTMLInputElement).value;
+                                        setLocalTitle(val);
+                                        scheduleSave(undefined, val);
+                                    }}
+                                    onBlur={() => {
+                                        flushPendingSave();
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                                            e.preventDefault();
+                                            flushPendingSave();
+                                        }
+                                    }}
                                     onChange={e => handleTitleChange(e.target.value)}
                                     placeholder="ページのタイトルを入力（例: 企画メモ、議事録）..."
                                 />
@@ -989,7 +1112,25 @@ export const Notebook: React.FC<NotebookProps> = ({ onViewChange }) => {
                             ) : (
                                 <textarea
                                     className="sheet-content-textarea"
-                                    value={activeNote.content}
+                                    value={localContent}
+                                    onCompositionStart={() => {
+                                        isComposingRef.current = true;
+                                    }}
+                                    onCompositionEnd={(e) => {
+                                        isComposingRef.current = false;
+                                        const val = (e.target as HTMLTextAreaElement).value;
+                                        setLocalContent(val);
+                                        scheduleSave(val, undefined);
+                                    }}
+                                    onBlur={() => {
+                                        flushPendingSave();
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                                            e.preventDefault();
+                                            flushPendingSave();
+                                        }
+                                    }}
                                     onChange={e => handleContentChange(e.target.value)}
                                     placeholder="文字を記入... (リンクや箇条書きも自由に入力できます)"
                                     rows={25}
