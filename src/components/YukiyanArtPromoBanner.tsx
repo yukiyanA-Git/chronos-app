@@ -13,8 +13,8 @@ export interface PromoApp {
 
 const FALLBACK_LOGO_URL = 'https://yukiyanart-feedback-hub.web.app/assets/icons/yukiyanart_logo.jpg';
 
-// 【yukiyanArt 公式10作品マスターリスト】 (全10作品 公式アイコンWeb URL完全適用)
-const OFFICIAL_10_YUKIYANART_APPS: PromoApp[] = [
+// 【yukiyanArt 公式全16作品マスターリスト】 (全16作品 公式アイコンWeb URL完全適用)
+const OFFICIAL_ALL_YUKIYANART_APPS: PromoApp[] = [
     {
         id: 'chronos',
         name: 'Chronos',
@@ -104,11 +104,65 @@ const OFFICIAL_10_YUKIYANART_APPS: PromoApp[] = [
         desc: 'ヘキサゴン（六角形）マップ上で繰り広げられるシミュレーション防衛ストラテジーゲーム',
         imageIcon: 'https://yukiyanart-feedback-hub.web.app/assets/icons/hex_bastion.jpg',
         color: '#EF4444'
+    },
+    {
+        id: 'flower_coloring',
+        name: '花と絵',
+        subName: 'Flower Growing Coloring App',
+        category: 'アート・育成・リラックス',
+        desc: '温室で四季の花を育て、花弁から天然インクを調合して水彩・混色塗り絵を楽しむ癒やしのアトリエWebアプリ',
+        imageIcon: 'https://yukiyanart-feedback-hub.web.app/assets/icons/flower_coloring.png',
+        color: '#10B981'
+    },
+    {
+        id: 'tokyo_gassen',
+        name: '東京合戦',
+        subName: '東京都全53市区町村 開拓×合戦シミュレーション',
+        category: 'シミュレーション・領土戦略',
+        desc: '東京都全53市区町村どこからでも旗揚げ可能！開拓内政、特産品外交、レトロFF風3v3コマンド合戦で東京統一を目指す本格戦略Webゲーム',
+        imageIcon: 'https://yukiyanart-feedback-hub.web.app/assets/icons/tokyo_gassen.png',
+        color: '#DC2626'
+    },
+    {
+        id: 'audio_dock',
+        name: 'AudioDock',
+        subName: 'オーディオ＆マイク ワンクリック管理ドック',
+        category: 'ユーティリティ・PC管理',
+        desc: 'ワンクリック・マイクミュートや個別音量調整に加え、リアルタイム話者分離＆高精度自動文字起こしを備えた常駐オーディオドック',
+        imageIcon: 'https://yukiyanart-feedback-hub.web.app/assets/icons/audio_dock.png',
+        color: '#38BDF8'
+    },
+    {
+        id: 'karada_note',
+        name: 'からだの違和感ノート',
+        subName: '40代からのからだメモ＆不調ログ',
+        category: 'ヘルスケア・日常記録',
+        desc: '40代からのなんとなく気になる不調・違和感をサッと記録。血圧手帳や受診時の医師提示カルテ、匿名共感タイムラインを備えた健康管理Webアプリ',
+        imageIcon: 'https://yukiyanart-feedback-hub.web.app/assets/icons/karada_note.jpg',
+        color: '#588B73'
+    },
+    {
+        id: 'sukemachi',
+        name: 'スケマチ',
+        subName: 'スケジュールマッチング（ログイン不要・URL共有）',
+        category: 'スケジュール・調整ツール',
+        desc: 'ログイン不要で候補日時を設定・URL共有可能！参加者の回答をリアルタイムに自動マッピングし、最適日程を色分け表示するスケジュール調整Webアプリ',
+        imageIcon: 'https://yukiyanart-feedback-hub.web.app/assets/icons/sukemachi.jpg',
+        color: '#4F46E5'
+    },
+    {
+        id: 'cccc',
+        name: 'CCCC',
+        subName: 'Clean・Compact・Care・Color',
+        category: 'PC最適化・ファイル整理',
+        desc: '「掃除して整頓しケアをして色を添える」不要フォルダ診断・ハッシュ重複整理・安心の復元タイムラインを備えたデスクトップPCオーガナイザー',
+        imageIcon: 'https://yukiyanart-feedback-hub.web.app/assets/icons/cccc.png',
+        color: '#38BDF8'
     }
 ];
 
-// 自アプリ (chronos) を自動除外した全9作品のプロモローテーションリスト
-const DEFAULT_PROMO_APPS = OFFICIAL_10_YUKIYANART_APPS.filter(app => app.id !== 'chronos');
+// 自アプリ (chronos) を自動除外した全15作品のプロモローテーションリスト
+const DEFAULT_PROMO_APPS = OFFICIAL_ALL_YUKIYANART_APPS.filter(app => app.id !== 'chronos');
 
 export const YukiyanArtPromoBanner: React.FC = () => {
     const [apps, setApps] = useState<PromoApp[]>(DEFAULT_PROMO_APPS);
@@ -120,11 +174,21 @@ export const YukiyanArtPromoBanner: React.FC = () => {
     useEffect(() => {
         const fetchPromoApps = async () => {
             try {
-                const res = await fetch('https://yukiyanart-feedback-hub.web.app/data/promo_apps.json');
+                const res = await fetch(`https://yukiyanart-feedback-hub.web.app/data/promo_apps.json?t=${Date.now()}`, { cache: 'no-store' });
                 if (res.ok) {
-                    const data: PromoApp[] = await res.json();
+                    const data: any[] = await res.json();
                     if (Array.isArray(data) && data.length > 0) {
-                        const filtered = data.filter(item => item.id && item.id.toLowerCase() !== 'chronos');
+                        const filtered = data
+                            .filter(item => item.id && item.id.toLowerCase() !== 'chronos')
+                            .map(item => ({
+                                id: item.id,
+                                name: item.name,
+                                subName: item.subName,
+                                category: item.category,
+                                desc: item.desc,
+                                imageIcon: item.imageIcon || item.iconUrl || (item.icon ? (item.icon.startsWith('http') ? item.icon : `https://yukiyanart-feedback-hub.web.app/${item.icon}`) : FALLBACK_LOGO_URL),
+                                color: item.color || '#38bdf8'
+                            }));
                         if (filtered.length > 0) {
                             setApps(filtered);
                         }
