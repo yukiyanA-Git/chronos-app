@@ -5,6 +5,7 @@
   "hosting": {
     "site": "chronos-app-d149d",
     "public": "dist",
+    "cleanUrls": true,
     "ignore": [
       "firebase.json",
       "**/.*",

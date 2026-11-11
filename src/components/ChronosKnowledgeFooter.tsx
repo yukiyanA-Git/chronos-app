@@ -129,6 +129,29 @@ export const ChronosKnowledgeFooter: React.FC = () => {
                     </span>
                 </div>
             </div>
+
+            {/* 常時表示の規約・運営者フッターナビゲーション */}
+            <div style={{
+                marginTop: '1rem',
+                paddingTop: '0.85rem',
+                borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '0.75rem',
+                fontSize: '0.8rem'
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                    <a href="/privacy.html" target="_blank" rel="noopener noreferrer" style={{ color: '#94a3b8', textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={(e) => (e.currentTarget.style.color = '#38bdf8')} onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}>プライバシーポリシー</a>
+                    <a href="/terms.html" target="_blank" rel="noopener noreferrer" style={{ color: '#94a3b8', textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={(e) => (e.currentTarget.style.color = '#38bdf8')} onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}>利用規約</a>
+                    <a href="/about.html" target="_blank" rel="noopener noreferrer" style={{ color: '#94a3b8', textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={(e) => (e.currentTarget.style.color = '#38bdf8')} onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}>運営者情報</a>
+                    <a href="mailto:yukiyana1983@gmail.com" style={{ color: '#94a3b8', textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={(e) => (e.currentTarget.style.color = '#38bdf8')} onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}>お問い合わせ</a>
+                </div>
+                <div style={{ color: '#64748b', fontSize: '0.75rem' }}>
+                    © yukiyanaArt / Chronos Productivity Platform
+                </div>
+            </div>
         </footer>
     );
 };
