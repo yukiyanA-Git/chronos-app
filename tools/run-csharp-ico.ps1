@@ -1,4 +1,4 @@
-$code = Get-Content 'C:\Users\Iwamoto\.gemini\antigravity\scratch\calendar-scheduler\make-standard-ico.cs' -Raw
+﻿$code = Get-Content 'C:\Users\Iwamoto\.gemini\antigravity\scratch\calendar-scheduler\tools\make-standard-ico.cs' -Raw
 Add-Type -TypeDefinition $code -ReferencedAssemblies 'System.Drawing'
 
 [Program]::Main(@())
@@ -7,7 +7,7 @@ Add-Type -TypeDefinition $code -ReferencedAssemblies 'System.Drawing'
 $appDir  = 'C:\Users\Iwamoto\.gemini\antigravity\scratch\calendar-scheduler'
 $deskIco = 'C:\Users\Iwamoto\Desktop\chronos-icon.ico'
 $deskLnk = 'C:\Users\Iwamoto\Desktop\Chronos.lnk'
-$vbsPath = Join-Path $appDir 'Chronos.vbs'
+$vbsPath = Join-Path $appDir 'tools\Chronos.vbs'
 
 $sh = New-Object -ComObject WScript.Shell
 $lnk = $sh.CreateShortcut($deskLnk)

@@ -2,7 +2,7 @@ $deskIco = 'C:\Users\Iwamoto\Desktop\chronos-icon.ico'
 $deskLnk = 'C:\Users\Iwamoto\Desktop\Chronos.lnk'
 $appDir  = 'C:\Users\Iwamoto\.gemini\antigravity\scratch\calendar-scheduler'
 $appIco  = Join-Path $appDir 'chronos-icon.ico'
-$batPath = Join-Path $appDir 'start-app.bat'
+$batPath = Join-Path $appDir 'tools\start-app.bat'
 
 if (Test-Path $deskIco) {
     Remove-Item $deskIco -Force -ErrorAction SilentlyContinue

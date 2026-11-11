@@ -1,4 +1,4 @@
-Add-Type -AssemblyName System.Drawing
+﻿Add-Type -AssemblyName System.Drawing
 Add-Type -TypeDefinition @"
 using System;
 using System.Runtime.InteropServices;
@@ -14,7 +14,7 @@ $pngPath = Join-Path $appDir 'chronos-icon.png'
 $icoPath = Join-Path $appDir 'chronos-icon.ico'
 $deskIco = 'C:\Users\Iwamoto\Desktop\chronos-icon.ico'
 $deskLnk = 'C:\Users\Iwamoto\Desktop\Chronos.lnk'
-$vbsPath = Join-Path $appDir 'Chronos.vbs'
+$vbsPath = Join-Path $appDir 'tools\Chronos.vbs'
 
 Write-Host "Creating Standard Windows ICO file..."
 

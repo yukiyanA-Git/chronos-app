@@ -3,7 +3,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const appDir  = __dirname;
+const appDir  = join(__dirname, '..');
 const pngPath = join(appDir, 'chronos-icon.png');
 const icoPath = join(appDir, 'chronos-icon.ico');
 

@@ -1,16 +1,16 @@
-$appDir  = 'C:\Users\Iwamoto\.gemini\antigravity\scratch\calendar-scheduler'
+﻿$appDir  = 'C:\Users\Iwamoto\.gemini\antigravity\scratch\calendar-scheduler'
 $pngPath = Join-Path $appDir 'chronos-icon.png'
 $icoPath = Join-Path $appDir 'chronos-icon.ico'
 $deskIco = 'C:\Users\Iwamoto\Desktop\chronos-icon.ico'
 $lnkPath = 'C:\Users\Iwamoto\Desktop\Chronos.lnk'
-$vbsPath = Join-Path $appDir 'Chronos.vbs'
+$vbsPath = Join-Path $appDir 'tools\Chronos.vbs'
 
 # アイコン画像とショートカットの更新
 if (Test-Path $pngPath) {
     # PNGからICO生成 (Make-ico.js を使用)
     Set-Location $appDir
     $env:PATH = "C:\Users\Iwamoto\.gemini\antigravity\node-portable\node-v22.11.0-win-x64;$env:PATH"
-    node make-ico.js
+    node (Join-Path $appDir 'tools\make-ico.js')
     
     if (Test-Path $icoPath) {
         Copy-Item $icoPath $deskIco -Force

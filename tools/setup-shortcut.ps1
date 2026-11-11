@@ -1,7 +1,7 @@
 $deskIco = 'C:\Users\Iwamoto\Desktop\chronos-icon.ico'
 $lnkPath = 'C:\Users\Iwamoto\Desktop\Chronos.lnk'
 $appDir  = 'C:\Users\Iwamoto\.gemini\antigravity\scratch\calendar-scheduler'
-$vbsPath = Join-Path $appDir 'Chronos.vbs'
+$vbsPath = Join-Path $appDir 'tools\Chronos.vbs'
 $srcIco  = Join-Path $appDir 'chronos-icon.ico'
 
 Remove-Item $deskIco -Force -ErrorAction SilentlyContinue

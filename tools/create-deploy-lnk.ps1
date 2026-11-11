@@ -1,6 +1,6 @@
 $deskLnk = 'C:\Users\Iwamoto\Desktop\DeployChronos.lnk'
 $appDir  = 'C:\Users\Iwamoto\.gemini\antigravity\scratch\calendar-scheduler'
-$batPath = Join-Path $appDir 'deploy-app.bat'
+$batPath = Join-Path $appDir 'tools\deploy-app.bat'
 
 $sh = New-Object -ComObject WScript.Shell
 $lnk = $sh.CreateShortcut($deskLnk)

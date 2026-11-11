@@ -2,8 +2,9 @@
 chcp 65001 >nul 2>&1
 title Chronos
 
-set "APP_DIR=%~dp0"
-if "%APP_DIR:~-1%"=="\" set "APP_DIR=%APP_DIR:~0,-1%"
+set "TOOLS_DIR=%~dp0"
+if "%TOOLS_DIR:~-1%"=="\" set "TOOLS_DIR=%TOOLS_DIR:~0,-1%"
+for %%i in ("%TOOLS_DIR%\..") do set "APP_DIR=%%~fi"
 
 for %%i in ("%APP_DIR%\..") do set "PARENT_DIR=%%~fi"
 for %%i in ("%APP_DIR%\..\..") do set "GRANDPARENT_DIR=%%~fi"
