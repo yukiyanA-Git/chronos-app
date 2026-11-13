@@ -130,48 +130,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onAddEventCl
                 <p className="current-date-display">{formattedDate}</p>
             </header>
 
-            {/* 🌟 Chronos アプリ紹介 & かんたん3ステップ案内 */}
-            <div className="glass" style={{
-                marginBottom: '1rem',
-                padding: '1.25rem 1.5rem',
-                borderRadius: '16px',
-                border: '1px solid rgba(56, 189, 248, 0.2)',
-                background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.6) 100%)',
-                color: '#cbd5e1'
-            }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.65rem' }}>
-                    <Sparkles size={18} style={{ color: '#38bdf8' }} />
-                    <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#f8fafc', letterSpacing: '0.04em' }}>
-                        Chronos（クロノス）へようこそ
-                    </h2>
-                </div>
-                <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.88rem', lineHeight: '1.65', color: '#cbd5e1' }}>
-                    Chronos（クロノス）は、予定・タスク・付箋メモをひとつの画面で管理できるWebカレンダーアプリです。<br />
-                    1日の予定を時間枠で区切るタイムブロック、思いついたToDoを色分け付箋で整理するボード、毎週の定例予定を自動で展開する週間タイムテーブルを備えています。<br />
-                    予定やタスクはGoogleクラウド（Firestore）に保存され、PC・スマートフォン・タブレットで同期できます。保存した予定はCSVで書き出せます。
-                </p>
-                <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-                    gap: '0.75rem',
-                    paddingTop: '0.65rem',
-                    borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-                    fontSize: '0.82rem',
-                    lineHeight: '1.55'
-                }}>
-                    <div style={{ background: 'rgba(255, 255, 255, 0.03)', padding: '0.65rem 0.85rem', borderRadius: '10px' }}>
-                        <strong style={{ color: '#38bdf8' }}>🚀 使い方（3ステップ）：</strong><br />
-                        (1) 付箋ボードにToDoを書き出す<br />
-                        (2) カレンダーの日時へ配置する<br />
-                        (3) 週間タイムテーブルで定例予定を自動展開する
-                    </div>
-                    <div style={{ background: 'rgba(255, 255, 255, 0.03)', padding: '0.65rem 0.85rem', borderRadius: '10px' }}>
-                        <strong style={{ color: '#34d399' }}>🎯 向いている人：</strong><br />
-                        1日の時間を区切って集中したい人、ToDoを視覚的に整理したい人、定例の会議・講義・シフトを繰り返し登録したくない人
-                    </div>
-                </div>
-            </div>
-
             {/* スマホ・PC共通の最上部ウィジェットエリア */}
             <div className="dashboard-widget-wrapper mb-4">
                 <ChronosWidgetPanel />
@@ -452,6 +410,49 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onAddEventCl
                                 付箋ボードで全付箋（{(data.stickies || []).length}件）を整理 ↗
                             </button>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* 🌟 Chronos アプリ紹介 & かんたん3ステップ案内 (最下部配置) */}
+            <div className="glass" style={{
+                marginTop: '1.25rem',
+                marginBottom: '1rem',
+                padding: '1.25rem 1.5rem',
+                borderRadius: '16px',
+                border: '1px solid rgba(56, 189, 248, 0.2)',
+                background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.6) 100%)',
+                color: '#cbd5e1'
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.65rem' }}>
+                    <Sparkles size={18} style={{ color: '#38bdf8' }} />
+                    <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#f8fafc', letterSpacing: '0.04em' }}>
+                        Chronos（クロノス）へようこそ
+                    </h2>
+                </div>
+                <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.88rem', lineHeight: '1.65', color: '#cbd5e1' }}>
+                    Chronos（クロノス）は、予定・タスク・付箋メモをひとつの画面で管理できるWebカレンダーアプリです。<br />
+                    1日の予定を時間枠で区切るタイムブロック、思いついたToDoを色分け付箋で整理するボード、毎週の定例予定を自動で展開する週間タイムテーブルを備えています。<br />
+                    予定やタスクはGoogleクラウド（Firestore）に保存され、PC・スマートフォン・タブレットで同期できます。保存した予定はCSVで書き出せます。
+                </p>
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+                    gap: '0.75rem',
+                    paddingTop: '0.65rem',
+                    borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                    fontSize: '0.82rem',
+                    lineHeight: '1.55'
+                }}>
+                    <div style={{ background: 'rgba(255, 255, 255, 0.03)', padding: '0.65rem 0.85rem', borderRadius: '10px' }}>
+                        <strong style={{ color: '#38bdf8' }}>🚀 使い方（3ステップ）：</strong><br />
+                        (1) 付箋ボードにToDoを書き出す<br />
+                        (2) カレンダーの日時へ配置する<br />
+                        (3) 週間タイムテーブルで定例予定を自動展開する
+                    </div>
+                    <div style={{ background: 'rgba(255, 255, 255, 0.03)', padding: '0.65rem 0.85rem', borderRadius: '10px' }}>
+                        <strong style={{ color: '#34d399' }}>🎯 向いている人：</strong><br />
+                        1日の時間を区切って集中したい人、ToDoを視覚的に整理したい人、定例の会議・講義・シフトを繰り返し登録したくない人
                     </div>
                 </div>
             </div>
